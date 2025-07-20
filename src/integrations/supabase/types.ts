@@ -14,16 +14,199 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      manuscripts: {
+        Row: {
+          abstract: string
+          admin_notes: string | null
+          author_id: string
+          co_authors: string[] | null
+          created_at: string
+          decision_date: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          keywords: string[] | null
+          status: Database["public"]["Enums"]["manuscript_status"]
+          submission_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          abstract: string
+          admin_notes?: string | null
+          author_id: string
+          co_authors?: string[] | null
+          created_at?: string
+          decision_date?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          keywords?: string[] | null
+          status?: Database["public"]["Enums"]["manuscript_status"]
+          submission_date?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          abstract?: string
+          admin_notes?: string | null
+          author_id?: string
+          co_authors?: string[] | null
+          created_at?: string
+          decision_date?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          keywords?: string[] | null
+          status?: Database["public"]["Enums"]["manuscript_status"]
+          submission_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          email: string
+          expertise_areas: string[] | null
+          first_name: string
+          id: string
+          institution: string | null
+          last_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          email: string
+          expertise_areas?: string[] | null
+          first_name: string
+          id?: string
+          institution?: string | null
+          last_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          email?: string
+          expertise_areas?: string[] | null
+          first_name?: string
+          id?: string
+          institution?: string | null
+          last_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          assigned_date: string
+          comments: string | null
+          completed_date: string | null
+          created_at: string
+          due_date: string
+          id: string
+          manuscript_id: string
+          rating: number | null
+          recommendation: string | null
+          reviewer_id: string
+          status: Database["public"]["Enums"]["review_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_date?: string
+          comments?: string | null
+          completed_date?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          manuscript_id: string
+          rating?: number | null
+          recommendation?: string | null
+          reviewer_id: string
+          status?: Database["public"]["Enums"]["review_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_date?: string
+          comments?: string | null
+          completed_date?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          manuscript_id?: string
+          rating?: number | null
+          recommendation?: string | null
+          reviewer_id?: string
+          status?: Database["public"]["Enums"]["review_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_manuscript_id_fkey"
+            columns: ["manuscript_id"]
+            isOneToOne: false
+            referencedRelation: "manuscripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "author" | "reviewer"
+      manuscript_status:
+        | "submitted"
+        | "under_review"
+        | "revision_requested"
+        | "accepted"
+        | "rejected"
+      review_status: "assigned" | "in_progress" | "completed" | "overdue"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +333,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "author", "reviewer"],
+      manuscript_status: [
+        "submitted",
+        "under_review",
+        "revision_requested",
+        "accepted",
+        "rejected",
+      ],
+      review_status: ["assigned", "in_progress", "completed", "overdue"],
+    },
   },
 } as const
