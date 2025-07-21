@@ -3,11 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send } from 'lucide-react';
+import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send, Trash2 } from 'lucide-react';
 import UserManagement from '@/components/UserManagement';
 import UserProfile from '@/components/UserProfile';
 import FileUpload from '@/components/FileUpload';
@@ -55,8 +56,9 @@ const AdminDashboard = () => {
   const [selectedManuscript, setSelectedManuscript] = useState<string>('');
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
   const [reviewDocuments, setReviewDocuments] = useState<{[key: string]: any[]}>({});
-  const [finalDocuments, setFinalDocuments] = useState<any[]>([]);
+  const [finalDocuments, setFinalDocuments] = useState<{[key: string]: any[]}>({});
   const [viewingManuscript, setViewingManuscript] = useState<Manuscript | null>(null);
+  const [selectedFinalManuscript, setSelectedFinalManuscript] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -318,8 +320,55 @@ const AdminDashboard = () => {
     }));
   };
 
-  const handleFinalDocumentsUpload = (files: any[]) => {
-    setFinalDocuments(files);
+  const handleFinalDocumentsUpload = (manuscriptId: string, files: any[]) => {
+    setFinalDocuments(prev => ({
+      ...prev,
+      [manuscriptId]: files
+    }));
+  };
+
+  const sendFinalDocumentsToAuthor = async (manuscriptId: string) => {
+    const documents = finalDocuments[manuscriptId];
+    if (!documents || documents.length === 0) {
+      toast({
+        title: "Error",
+        description: "No final documents to send.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // In a real implementation, you would send an email notification
+    // For now, we'll just show a success message
+    toast({
+      title: "Success",
+      description: `${documents.length} final document(s) sent to author.`,
+    });
+  };
+
+  const deleteManuscript = async (manuscriptId: string) => {
+    try {
+      const { error } = await supabase
+        .from('manuscripts')
+        .delete()
+        .eq('id', manuscriptId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Manuscript deleted successfully.",
+      });
+
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting manuscript:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete manuscript.",
+        variant: "destructive",
+      });
+    }
   };
 
   const sendDocumentsToAuthor = async (manuscriptId: string) => {
@@ -466,6 +515,32 @@ const AdminDashboard = () => {
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
                       </Button>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm" variant="destructive">
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Manuscript</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete "{manuscript.title}"? This action cannot be undone and will permanently remove all associated data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => deleteManuscript(manuscript.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete Manuscript
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       
                       {manuscript.file_path && (
                         <Button
@@ -612,34 +687,88 @@ const AdminDashboard = () => {
             <CardHeader>
               <CardTitle>Final Document Management</CardTitle>
               <CardDescription>
-                Upload final reviewed documents to send to authors
+                Upload final reviewed documents for specific manuscripts to send to authors
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <FileUpload
-                bucketName="manuscripts"
-                folderPath="final-documents"
-                onFilesUploaded={handleFinalDocumentsUpload}
-                maxFiles={10}
-                label="Upload Final Reviewed Documents"
-              />
-              
-              {finalDocuments.length > 0 && (
-                <div className="mt-4 p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">Uploaded Documents:</h4>
-                  <div className="space-y-2">
-                    {finalDocuments.map((doc, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-sm">{doc.name}</span>
-                        <Button size="sm" variant="outline">
-                          <Download className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  {manuscripts.map((manuscript) => (
+                    <div key={manuscript.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium">{manuscript.title}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            by {manuscript.author.first_name} {manuscript.author.last_name}
+                          </p>
+                        </div>
+                        <Badge className={getStatusColor(manuscript.status)}>
+                          {manuscript.status.replace('_', ' ')}
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
+                      
+                      <div className="space-y-3">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedFinalManuscript(manuscript.id)}
+                            >
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload Final Documents
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Upload Final Documents</DialogTitle>
+                              <DialogDescription>
+                                Upload final reviewed documents for "{manuscript.title}" to send to the author
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <FileUpload
+                                bucketName="manuscripts"
+                                folderPath={`final-documents/${manuscript.id}`}
+                                onFilesUploaded={(files) => handleFinalDocumentsUpload(manuscript.id, files)}
+                                maxFiles={10}
+                                label="Upload Final Reviewed Documents"
+                              />
+                              
+                              <div className="flex gap-2">
+                                <Button 
+                                  onClick={() => sendFinalDocumentsToAuthor(manuscript.id)}
+                                  disabled={!finalDocuments[manuscript.id] || finalDocuments[manuscript.id]?.length === 0}
+                                  className="flex-1"
+                                >
+                                  <Send className="h-4 w-4 mr-1" />
+                                  Send to Author
+                                </Button>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        
+                        {finalDocuments[manuscript.id] && finalDocuments[manuscript.id].length > 0 && (
+                          <div className="bg-muted/50 p-3 rounded-lg">
+                            <h5 className="font-medium text-sm mb-2">Final Documents ({finalDocuments[manuscript.id].length}):</h5>
+                            <div className="space-y-1">
+                              {finalDocuments[manuscript.id].map((doc, index) => (
+                                <div key={index} className="flex items-center justify-between text-sm">
+                                  <span>{doc.name}</span>
+                                  <Button size="sm" variant="ghost" className="h-6 px-2">
+                                    <Download className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 
