@@ -19,6 +19,7 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     institution: '',
@@ -27,6 +28,17 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if passwords match
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -74,6 +86,7 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
       setFormData({
         email: '',
         password: '',
+        confirmPassword: '',
         firstName: '',
         lastName: '',
         institution: '',
@@ -149,6 +162,18 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
               type="password"
               value={formData.password}
               onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              required
+              minLength={6}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
               required
               minLength={6}
             />
