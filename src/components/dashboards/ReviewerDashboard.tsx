@@ -701,12 +701,12 @@ DATE: ________________
                                             <Input
                                               id="assessmentFile"
                                               type="file"
-                                              accept=".pdf,.doc,.docx,.txt"
+                                              accept=".doc,.docx"
                                               onChange={(e) => setAssessmentFile(e.target.files?.[0] || null)}
                                               required
                                             />
                                             <p className="text-sm text-muted-foreground mt-1">
-                                              Upload your completed assessment form (required)
+                                              Upload your completed assessment template (Word format required)
                                             </p>
                                           </div>
                                           
