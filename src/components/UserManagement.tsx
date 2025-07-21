@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Users, Shield, Edit, Save } from 'lucide-react';
@@ -29,6 +30,12 @@ const UserManagement = () => {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRoles, setUpdatingRoles] = useState<Set<string>>(new Set());
+  const [confirmRoleChange, setConfirmRoleChange] = useState<{
+    userId: string;
+    userName: string;
+    currentRole: string;
+    newRole: 'admin' | 'author' | 'reviewer';
+  } | null>(null);
 
   useEffect(() => {
     fetchUsersAndRoles();
@@ -74,7 +81,24 @@ const UserManagement = () => {
     return userRole?.role || 'author'; // Default to author if no role found
   };
 
-  const updateUserRole = async (userId: string, newRole: 'admin' | 'author' | 'reviewer') => {
+  const handleRoleChangeRequest = (userId: string, newRole: 'admin' | 'author' | 'reviewer') => {
+    const user = users.find(u => u.user_id === userId);
+    const currentRole = getUserRole(userId);
+    
+    if (user && currentRole !== newRole) {
+      setConfirmRoleChange({
+        userId,
+        userName: `${user.first_name} ${user.last_name}`,
+        currentRole,
+        newRole
+      });
+    }
+  };
+
+  const confirmRoleChangeAction = async () => {
+    if (!confirmRoleChange) return;
+    
+    const { userId, newRole } = confirmRoleChange;
     setUpdatingRoles(prev => new Set(prev).add(userId));
     
     try {
@@ -120,6 +144,7 @@ const UserManagement = () => {
         updated.delete(userId);
         return updated;
       });
+      setConfirmRoleChange(null);
     }
   };
 
@@ -227,13 +252,13 @@ const UserManagement = () => {
                              <span className="text-sm text-muted-foreground">Non-editable</span>
                            ) : (
                              <div className="flex items-center gap-2">
-                               <Select
-                                 value={currentRole}
-                                 onValueChange={(newRole: 'admin' | 'author' | 'reviewer') => 
-                                   updateUserRole(user.user_id, newRole)
-                                 }
-                                 disabled={isUpdating}
-                               >
+                                <Select
+                                  value={currentRole}
+                                  onValueChange={(newRole: 'admin' | 'author' | 'reviewer') => 
+                                    handleRoleChangeRequest(user.user_id, newRole)
+                                  }
+                                  disabled={isUpdating}
+                                >
                                  <SelectTrigger className="w-32">
                                    <SelectValue />
                                  </SelectTrigger>
@@ -338,6 +363,33 @@ const UserManagement = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Role Change Confirmation Dialog */}
+      <AlertDialog open={!!confirmRoleChange} onOpenChange={() => setConfirmRoleChange(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Role Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to change {confirmRoleChange?.userName}'s role from{' '}
+              <span className="font-semibold capitalize">{confirmRoleChange?.currentRole}</span> to{' '}
+              <span className="font-semibold capitalize">{confirmRoleChange?.newRole}</span>?
+              {confirmRoleChange?.newRole === 'admin' && (
+                <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    ⚠️ This user will gain full system access and user management privileges.
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRoleChangeAction}>
+              Confirm Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
