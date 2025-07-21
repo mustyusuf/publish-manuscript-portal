@@ -349,12 +349,44 @@ const AdminDashboard = () => {
       return;
     }
 
-    // In a real implementation, you would send an email notification
-    // For now, we'll just show a success message
-    toast({
-      title: "Success",
-      description: `${documents.length} final document(s) sent to author.`,
-    });
+    try {
+      // Get public URLs for the documents
+      const documentUrls = await Promise.all(
+        documents.map(async (doc: any) => {
+          const { data } = await supabase.storage
+            .from('manuscripts')
+            .createSignedUrl(doc.path, 7 * 24 * 60 * 60); // 7 days expiry
+          
+          return {
+            name: doc.name,
+            path: doc.path,
+            url: data?.signedUrl || ''
+          };
+        })
+      );
+
+      // Call edge function to send email
+      const { error } = await supabase.functions.invoke('send-final-documents', {
+        body: {
+          manuscriptId,
+          documents: documentUrls
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Final documents sent to author successfully.`,
+      });
+    } catch (error: any) {
+      console.error('Error sending final documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send final documents to author. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const deleteManuscript = async (manuscriptId: string) => {
