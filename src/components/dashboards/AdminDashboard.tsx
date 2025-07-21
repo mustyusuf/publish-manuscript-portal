@@ -332,6 +332,7 @@ const AdminDashboard = () => {
   };
 
   const handleFinalDocumentsUpload = (manuscriptId: string, files: any[]) => {
+    console.log('Final documents uploaded for manuscript:', manuscriptId, files);
     setFinalDocuments(prev => ({
       ...prev,
       [manuscriptId]: files
@@ -340,7 +341,11 @@ const AdminDashboard = () => {
 
   const sendFinalDocumentsToAuthor = async (manuscriptId: string) => {
     const documents = finalDocuments[manuscriptId];
+    console.log('Sending final documents to author for manuscript:', manuscriptId);
+    console.log('Documents available:', documents);
+    
     if (!documents || documents.length === 0) {
+      console.log('No documents found for manuscript:', manuscriptId);
       toast({
         title: "Error",
         description: "No final documents to send.",
