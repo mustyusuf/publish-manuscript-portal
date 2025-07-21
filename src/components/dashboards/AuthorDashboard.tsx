@@ -54,22 +54,29 @@ const AuthorDashboard = () => {
 
   const fetchManuscripts = async () => {
     if (!user?.id) {
+      console.log('No user ID, stopping fetch');
       setLoading(false);
       return;
     }
 
+    console.log('Starting fetchManuscripts for user:', user.id);
+    
     try {
+      console.log('Making Supabase query...');
       const { data, error } = await supabase
         .from('manuscripts')
         .select('*')
         .eq('author_id', user.id)
         .order('submission_date', { ascending: false });
 
+      console.log('Supabase response:', { data, error });
+
       if (error) {
         console.error('Supabase error fetching manuscripts:', error);
         throw error;
       }
 
+      console.log('Setting manuscripts data:', data);
       setManuscripts(data || []);
     } catch (error) {
       console.error('Error fetching manuscripts:', error);
