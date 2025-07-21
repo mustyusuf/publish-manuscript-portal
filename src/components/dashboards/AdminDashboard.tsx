@@ -14,7 +14,7 @@ import UserProfile from '@/components/UserProfile';
 interface Manuscript {
   id: string;
   title: string;
-  status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected';
+  status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected' | 'internal_review' | 'external_review' | 'accept_without_correction' | 'accept_minor_corrections' | 'accept_major_corrections' | 'published' | 'reject';
   submission_date: string;
   author: {
     first_name: string;
@@ -177,13 +177,13 @@ const AdminDashboard = () => {
     }
   };
 
-  const updateManuscriptStatus = async (manuscriptId: string, status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected') => {
+  const updateManuscriptStatus = async (manuscriptId: string, status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected' | 'internal_review' | 'external_review' | 'accept_without_correction' | 'accept_minor_corrections' | 'accept_major_corrections' | 'published' | 'reject') => {
     try {
       const { error } = await supabase
         .from('manuscripts')
         .update({ 
           status,
-          decision_date: status === 'accepted' || status === 'rejected' ? new Date().toISOString() : null
+          decision_date: ['accepted', 'rejected', 'accept_without_correction', 'accept_minor_corrections', 'accept_major_corrections', 'published', 'reject'].includes(status) ? new Date().toISOString() : null
         })
         .eq('id', manuscriptId);
 
@@ -211,9 +211,21 @@ const AdminDashboard = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'under_review':
         return 'bg-blue-100 text-blue-800';
+      case 'internal_review':
+        return 'bg-purple-100 text-purple-800';
+      case 'external_review':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'revision_requested':
+        return 'bg-orange-100 text-orange-800';
       case 'accepted':
+      case 'accept_without_correction':
+      case 'accept_minor_corrections':
+      case 'accept_major_corrections':
         return 'bg-green-100 text-green-800';
+      case 'published':
+        return 'bg-emerald-100 text-emerald-800';
       case 'rejected':
+      case 'reject':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -393,26 +405,26 @@ const AdminDashboard = () => {
                         </Dialog>
                       )}
                       
-                      {manuscript.status === 'under_review' && (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-600"
-                            onClick={() => updateManuscriptStatus(manuscript.id, 'accepted')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600"
-                            onClick={() => updateManuscriptStatus(manuscript.id, 'rejected')}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <Select
+                        onValueChange={(value) => updateManuscriptStatus(manuscript.id, value as any)}
+                        defaultValue={manuscript.status}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="submitted">Submitted</SelectItem>
+                          <SelectItem value="under_review">Under Review</SelectItem>
+                          <SelectItem value="internal_review">Internal Review</SelectItem>
+                          <SelectItem value="external_review">External Review</SelectItem>
+                          <SelectItem value="revision_requested">Revision Requested</SelectItem>
+                          <SelectItem value="accept_without_correction">Accept without correction</SelectItem>
+                          <SelectItem value="accept_minor_corrections">Accept subject to minor corrections</SelectItem>
+                          <SelectItem value="accept_major_corrections">Accept subject to major corrections</SelectItem>
+                          <SelectItem value="published">Published</SelectItem>
+                          <SelectItem value="reject">Reject</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 ))}

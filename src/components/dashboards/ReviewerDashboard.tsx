@@ -33,8 +33,8 @@ interface ReviewAssignment {
     file_path: string;
     file_name: string;
     author: {
-      first_name: string;
-      last_name: string;
+      first_name: string; // Will always be "Anonymous"
+      last_name: string;  // Will always be "Author"
     };
   };
 }
@@ -90,43 +90,33 @@ const ReviewerDashboard = () => {
 
       if (manuscriptsError) throw manuscriptsError;
 
-      // Fetch authors for manuscripts
-      const authorIds = manuscriptsData?.map(m => m.author_id) || [];
-      const { data: authorsData, error: authorsError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name')
-        .in('user_id', authorIds);
-
-      if (authorsError) throw authorsError;
-
-      // Transform assignments with manuscript and author data
-      const transformedAssignments = reviewsData?.map(review => {
-        const manuscript = manuscriptsData?.find(m => m.id === review.manuscript_id);
-        const author = authorsData?.find(a => a.user_id === manuscript?.author_id);
-        
-        return {
-          id: review.id,
-          status: review.status,
-          assigned_date: review.assigned_date,
-          due_date: review.due_date,
-          completed_date: review.completed_date,
-          rating: review.rating,
-          comments: review.comments,
-          recommendation: review.recommendation,
-          manuscript: {
-            id: manuscript?.id || '',
-            title: manuscript?.title || '',
-            abstract: manuscript?.abstract || '',
-            keywords: manuscript?.keywords || [],
-            file_path: manuscript?.file_path || '',
-            file_name: manuscript?.file_name || '',
-            author: {
-              first_name: author?.first_name || '',
-              last_name: author?.last_name || ''
-            }
-          }
-        };
-      }) as ReviewAssignment[] || [];
+  // Transform assignments with manuscript data only (blind review - no author info)
+  const transformedAssignments = reviewsData?.map(review => {
+    const manuscript = manuscriptsData?.find(m => m.id === review.manuscript_id);
+    
+    return {
+      id: review.id,
+      status: review.status,
+      assigned_date: review.assigned_date,
+      due_date: review.due_date,
+      completed_date: review.completed_date,
+      rating: review.rating,
+      comments: review.comments,
+      recommendation: review.recommendation,
+      manuscript: {
+        id: manuscript?.id || '',
+        title: manuscript?.title || '',
+        abstract: manuscript?.abstract || '',
+        keywords: manuscript?.keywords || [],
+        file_path: manuscript?.file_path || '',
+        file_name: manuscript?.file_name || '',
+        author: {
+          first_name: 'Anonymous',
+          last_name: 'Author'
+        }
+      }
+    };
+  }) as ReviewAssignment[] || [];
       
       setAssignments(transformedAssignments);
     } catch (error) {
@@ -325,11 +315,21 @@ const ReviewerDashboard = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'under_review':
         return 'bg-blue-100 text-blue-800';
+      case 'internal_review':
+        return 'bg-purple-100 text-purple-800';
+      case 'external_review':
+        return 'bg-indigo-100 text-indigo-800';
       case 'revision_requested':
         return 'bg-orange-100 text-orange-800';
       case 'accepted':
+      case 'accept_without_correction':
+      case 'accept_minor_corrections':
+      case 'accept_major_corrections':
         return 'bg-green-100 text-green-800';
+      case 'published':
+        return 'bg-emerald-100 text-emerald-800';
       case 'rejected':
+      case 'reject':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';

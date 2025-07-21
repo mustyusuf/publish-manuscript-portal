@@ -221,6 +221,13 @@ export type Database = {
         | "revision_requested"
         | "accepted"
         | "rejected"
+        | "internal_review"
+        | "external_review"
+        | "accept_without_correction"
+        | "accept_minor_corrections"
+        | "accept_major_corrections"
+        | "published"
+        | "reject"
       review_status: "assigned" | "in_progress" | "completed" | "overdue"
     }
     CompositeTypes: {
@@ -356,6 +363,13 @@ export const Constants = {
         "revision_requested",
         "accepted",
         "rejected",
+        "internal_review",
+        "external_review",
+        "accept_without_correction",
+        "accept_minor_corrections",
+        "accept_major_corrections",
+        "published",
+        "reject",
       ],
       review_status: ["assigned", "in_progress", "completed", "overdue"],
     },
