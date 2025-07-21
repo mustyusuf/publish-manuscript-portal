@@ -685,44 +685,45 @@ DATE: ________________
                                            </Select>
                                          </div>
                                       
-                                       <div>
-                                         <Label htmlFor="comments">Detailed Comments</Label>
-                                         <Textarea
-                                           id="comments"
-                                           name="comments"
-                                           rows={6}
-                                           placeholder="Provide detailed feedback for the author, including strengths, weaknesses, and suggestions for improvement..."
-                                           required
-                                         />
-                                       </div>
+                                        <div>
+                                          <Label htmlFor="comments">Detailed Comments (Optional)</Label>
+                                          <Textarea
+                                            id="comments"
+                                            name="comments"
+                                            rows={6}
+                                            placeholder="Provide detailed feedback for the author, including strengths, weaknesses, and suggestions for improvement..."
+                                          />
+                                        </div>
 
-                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         <div>
-                                           <Label htmlFor="assessmentFile">Upload Assessment Form (Optional)</Label>
-                                           <Input
-                                             id="assessmentFile"
-                                             type="file"
-                                             accept=".pdf,.doc,.docx,.txt"
-                                             onChange={(e) => setAssessmentFile(e.target.files?.[0] || null)}
-                                           />
-                                           <p className="text-sm text-muted-foreground mt-1">
-                                             Upload your completed assessment form
-                                           </p>
-                                         </div>
-                                         
-                                         <div>
-                                           <Label htmlFor="reviewedManuscript">Upload Reviewed Manuscript (Optional)</Label>
-                                           <Input
-                                             id="reviewedManuscript"
-                                             type="file"
-                                             accept=".pdf,.doc,.docx"
-                                             onChange={(e) => setReviewedManuscriptFile(e.target.files?.[0] || null)}
-                                           />
-                                           <p className="text-sm text-muted-foreground mt-1">
-                                             Upload manuscript with your annotations/comments
-                                           </p>
-                                         </div>
-                                       </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <Label htmlFor="assessmentFile">Upload Assessment Form</Label>
+                                            <Input
+                                              id="assessmentFile"
+                                              type="file"
+                                              accept=".pdf,.doc,.docx,.txt"
+                                              onChange={(e) => setAssessmentFile(e.target.files?.[0] || null)}
+                                              required
+                                            />
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                              Upload your completed assessment form (required)
+                                            </p>
+                                          </div>
+                                          
+                                          <div>
+                                            <Label htmlFor="reviewedManuscript">Upload Reviewed Manuscript</Label>
+                                            <Input
+                                              id="reviewedManuscript"
+                                              type="file"
+                                              accept=".pdf,.doc,.docx"
+                                              onChange={(e) => setReviewedManuscriptFile(e.target.files?.[0] || null)}
+                                              required
+                                            />
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                              Upload manuscript with your annotations/comments (required)
+                                            </p>
+                                          </div>
+                                        </div>
                                       
                                       <div className="bg-muted p-3 rounded-lg">
                                         <h4 className="font-medium mb-2">Manuscript Details:</h4>
