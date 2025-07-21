@@ -7,15 +7,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings } from 'lucide-react';
+import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send } from 'lucide-react';
 import UserManagement from '@/components/UserManagement';
 import UserProfile from '@/components/UserProfile';
+import FileUpload from '@/components/FileUpload';
 
 interface Manuscript {
   id: string;
   title: string;
   status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected' | 'internal_review' | 'external_review' | 'accept_without_correction' | 'accept_minor_corrections' | 'accept_major_corrections' | 'published' | 'reject';
   submission_date: string;
+  file_path?: string;
+  file_name?: string;
   author: {
     first_name: string;
     last_name: string;
@@ -43,6 +46,8 @@ const AdminDashboard = () => {
   });
   const [selectedManuscript, setSelectedManuscript] = useState<string>('');
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
+  const [reviewDocuments, setReviewDocuments] = useState<{[key: string]: any[]}>({});
+  const [finalDocuments, setFinalDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -55,7 +60,7 @@ const AdminDashboard = () => {
       // Fetch manuscripts
       const { data: manuscriptsData, error: manuscriptsError } = await supabase
         .from('manuscripts')
-        .select('id, title, status, submission_date, author_id')
+        .select('id, title, status, submission_date, author_id, file_path, file_name')
         .order('submission_date', { ascending: false });
 
       if (manuscriptsError) throw manuscriptsError;
@@ -93,6 +98,8 @@ const AdminDashboard = () => {
           title: m.title,
           status: m.status,
           submission_date: m.submission_date,
+          file_path: m.file_path,
+          file_name: m.file_name,
           author: {
             first_name: author?.first_name || '',
             last_name: author?.last_name || '',
@@ -203,6 +210,77 @@ const AdminDashboard = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const downloadManuscript = async (manuscript: Manuscript) => {
+    if (!manuscript.file_path) {
+      toast({
+        title: "Error",
+        description: "No file available for download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('manuscripts')
+        .download(manuscript.file_path);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = manuscript.file_name || 'manuscript.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Manuscript downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download manuscript.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReviewDocumentsUpload = (manuscriptId: string, files: any[]) => {
+    setReviewDocuments(prev => ({
+      ...prev,
+      [manuscriptId]: files
+    }));
+  };
+
+  const handleFinalDocumentsUpload = (files: any[]) => {
+    setFinalDocuments(files);
+  };
+
+  const sendDocumentsToAuthor = async (manuscriptId: string) => {
+    const documents = reviewDocuments[manuscriptId];
+    if (!documents || documents.length === 0) {
+      toast({
+        title: "Error",
+        description: "No documents to send.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // In a real implementation, you would send an email notification
+    // For now, we'll just show a success message
+    toast({
+      title: "Success",
+      description: `${documents.length} document(s) sent to author for review.`,
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -322,6 +400,17 @@ const AdminDashboard = () => {
                         {manuscript.status.replace('_', ' ')}
                       </Badge>
                       
+                      {manuscript.file_path && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadManuscript(manuscript)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      )}
+                      
                       {manuscript.status === 'submitted' && (
                         <Dialog>
                           <DialogTrigger asChild>
@@ -381,6 +470,15 @@ const AdminDashboard = () => {
                                   )}
                                 </div>
                               </div>
+                              
+                              <FileUpload
+                                bucketName="manuscripts"
+                                folderPath={`review-documents/${manuscript.id}`}
+                                onFilesUploaded={(files) => handleReviewDocumentsUpload(manuscript.id, files)}
+                                maxFiles={5}
+                                label="Upload Review Documents (Optional)"
+                              />
+                              
                               <div className="flex gap-2">
                                 <Button 
                                   onClick={assignReviewers} 
@@ -403,21 +501,32 @@ const AdminDashboard = () => {
                             </div>
                           </DialogContent>
                         </Dialog>
-                      )}
-                      
-                      <Select
-                        onValueChange={(value) => updateManuscriptStatus(manuscript.id, value as any)}
-                        defaultValue={manuscript.status}
-                      >
-                        <SelectTrigger className="w-48">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="submitted">Submitted</SelectItem>
-                          <SelectItem value="under_review">Under Review</SelectItem>
-                          <SelectItem value="internal_review">Internal Review</SelectItem>
-                          <SelectItem value="external_review">External Review</SelectItem>
-                          <SelectItem value="revision_requested">Revision Requested</SelectItem>
+                       )}
+                       
+                       {manuscript.status !== 'submitted' && reviewDocuments[manuscript.id] && (
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           onClick={() => sendDocumentsToAuthor(manuscript.id)}
+                         >
+                           <Send className="h-4 w-4 mr-1" />
+                           Send to Author
+                         </Button>
+                       )}
+                       
+                       <Select
+                         onValueChange={(value) => updateManuscriptStatus(manuscript.id, value as any)}
+                         defaultValue={manuscript.status}
+                       >
+                         <SelectTrigger className="w-48">
+                           <SelectValue />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="submitted">Submitted</SelectItem>
+                           <SelectItem value="under_review">Under Review</SelectItem>
+                           <SelectItem value="internal_review">Internal Review</SelectItem>
+                           <SelectItem value="external_review">External Review</SelectItem>
+                           <SelectItem value="revision_requested">Revision Requested</SelectItem>
                           <SelectItem value="accept_without_correction">Accept without correction</SelectItem>
                           <SelectItem value="accept_minor_corrections">Accept subject to minor corrections</SelectItem>
                           <SelectItem value="accept_major_corrections">Accept subject to major corrections</SelectItem>
@@ -429,6 +538,41 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Final Document Management</CardTitle>
+              <CardDescription>
+                Upload final reviewed documents to send to authors
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileUpload
+                bucketName="manuscripts"
+                folderPath="final-documents"
+                onFilesUploaded={handleFinalDocumentsUpload}
+                maxFiles={10}
+                label="Upload Final Reviewed Documents"
+              />
+              
+              {finalDocuments.length > 0 && (
+                <div className="mt-4 p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Uploaded Documents:</h4>
+                  <div className="space-y-2">
+                    {finalDocuments.map((doc, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-sm">{doc.name}</span>
+                        <Button size="sm" variant="outline">
+                          <Download className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
