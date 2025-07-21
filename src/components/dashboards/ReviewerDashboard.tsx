@@ -4,12 +4,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Clock, CheckCircle, Star, Eye } from 'lucide-react';
+import { FileText, Clock, CheckCircle, Star, Eye, Upload, Download, Plus } from 'lucide-react';
 
 interface ReviewAssignment {
   id: string;
@@ -34,16 +37,32 @@ interface ReviewAssignment {
   };
 }
 
+interface Manuscript {
+  id: string;
+  title: string;
+  abstract: string;
+  status: string;
+  submission_date: string;
+  file_name: string;
+  file_path: string;
+  keywords: string[];
+}
+
 const ReviewerDashboard = () => {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<ReviewAssignment[]>([]);
+  const [manuscripts, setManuscripts] = useState<Manuscript[]>([]);
+  const [manuscriptFile, setManuscriptFile] = useState<File | null>(null);
+  const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [submittingManuscript, setSubmittingManuscript] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
       fetchAssignments();
+      fetchManuscripts();
     }
   }, [user]);
 
@@ -118,6 +137,95 @@ const ReviewerDashboard = () => {
     }
   };
 
+  const fetchManuscripts = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('manuscripts')
+        .select('*')
+        .eq('author_id', user.id)
+        .order('submission_date', { ascending: false });
+
+      if (error) throw error;
+      setManuscripts(data || []);
+    } catch (error) {
+      console.error('Error fetching manuscripts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load manuscripts.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSubmitManuscript = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user || !manuscriptFile || !coverLetterFile) return;
+
+    setSubmittingManuscript(true);
+    
+    try {
+      const formData = new FormData(e.currentTarget);
+      const title = formData.get('title') as string;
+
+      // Upload manuscript file
+      const manuscriptFileExt = manuscriptFile.name.split('.').pop();
+      const manuscriptFileName = `${user.id}/manuscripts/${Date.now()}.${manuscriptFileExt}`;
+      
+      const { error: manuscriptUploadError } = await supabase.storage
+        .from('manuscripts')
+        .upload(manuscriptFileName, manuscriptFile);
+
+      if (manuscriptUploadError) throw manuscriptUploadError;
+
+      // Upload cover letter
+      const coverLetterFileExt = coverLetterFile.name.split('.').pop();
+      const coverLetterFileName = `${user.id}/cover-letters/${Date.now()}.${coverLetterFileExt}`;
+      
+      const { error: coverLetterUploadError } = await supabase.storage
+        .from('manuscripts')
+        .upload(coverLetterFileName, coverLetterFile);
+
+      if (coverLetterUploadError) throw coverLetterUploadError;
+
+      // Create manuscript record
+      const { error: insertError } = await supabase
+        .from('manuscripts')
+        .insert({
+          title,
+          abstract: '',
+          author_id: user.id,
+          file_path: manuscriptFileName,
+          file_name: manuscriptFile.name,
+          file_size: manuscriptFile.size,
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Success",
+        description: "Manuscript submitted successfully!",
+      });
+
+      setManuscriptFile(null);
+      setCoverLetterFile(null);
+      fetchManuscripts();
+      
+      // Reset form
+      (e.target as HTMLFormElement).reset();
+    } catch (error) {
+      console.error('Error submitting manuscript:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit manuscript.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingManuscript(false);
+    }
+  };
+
   const submitReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmittingReview(true);
@@ -175,6 +283,23 @@ const ReviewerDashboard = () => {
     }
   };
 
+  const getManuscriptStatusColor = (status: string) => {
+    switch (status) {
+      case 'submitted':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'under_review':
+        return 'bg-blue-100 text-blue-800';
+      case 'revision_requested':
+        return 'bg-orange-100 text-orange-800';
+      case 'accepted':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const isOverdue = (dueDate: string) => {
     return new Date(dueDate) < new Date() && !assignments.find(a => a.due_date === dueDate)?.completed_date;
   };
@@ -220,197 +345,353 @@ const ReviewerDashboard = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Reviewer Dashboard</h1>
-        <p className="text-muted-foreground">Review assigned manuscripts</p>
+        <p className="text-muted-foreground">Review assigned manuscripts and submit your own</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="reviews" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="reviews">Review Assignments</TabsTrigger>
+          <TabsTrigger value="submissions">My Submissions</TabsTrigger>
+        </TabsList>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completed}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <Clock className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{stats.overdue}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4">
-        {assignments.length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No review assignments</h3>
-              <p className="text-muted-foreground">
-                You don't have any manuscripts to review at the moment
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          assignments.map((assignment) => (
-            <Card key={assignment.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{assignment.manuscript.title}</CardTitle>
-                    <CardDescription>
-                      by {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
-                    </CardDescription>
-                    <CardDescription>
-                      Due: {new Date(assignment.due_date).toLocaleDateString()}
-                      {isOverdue(assignment.due_date) && (
-                        <span className="text-red-500 ml-2">(Overdue)</span>
-                      )}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={getStatusColor(assignment.status)}>
-                      {assignment.status.replace('_', ' ')}
-                    </Badge>
-                    {assignment.rating && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm">{assignment.rating}/5</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <TabsContent value="reviews" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Assignments</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {assignment.manuscript.abstract}
-                </p>
-                
-                {assignment.manuscript.keywords?.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm font-medium mb-2">Keywords:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {assignment.manuscript.keywords.map((keyword, index) => (
-                        <Badge key={index} variant="outline">
-                          {keyword}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {assignment.status === 'completed' && assignment.comments && (
-                  <div className="mb-4 p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium mb-1">Your Review:</p>
-                    <p className="text-sm text-muted-foreground">{assignment.comments}</p>
-                    <p className="text-sm mt-2">
-                      <strong>Recommendation:</strong> {assignment.recommendation}
-                    </p>
-                  </div>
-                )}
-                
-                <div className="flex justify-between items-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Manuscript
-                  </Button>
-                  
-                  {assignment.status !== 'completed' && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm">Submit Review</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Submit Review</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={submitReview} className="space-y-4">
-                          <input type="hidden" name="reviewId" value={assignment.id} />
-                          
-                          <div>
-                            <Label htmlFor="rating">Rating (1-5)</Label>
-                            <Select name="rating" required>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select rating" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1">1 - Poor</SelectItem>
-                                <SelectItem value="2">2 - Fair</SelectItem>
-                                <SelectItem value="3">3 - Good</SelectItem>
-                                <SelectItem value="4">4 - Very Good</SelectItem>
-                                <SelectItem value="5">5 - Excellent</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="recommendation">Recommendation</Label>
-                            <Select name="recommendation" required>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select recommendation" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="accept">Accept</SelectItem>
-                                <SelectItem value="minor_revision">Minor Revision</SelectItem>
-                                <SelectItem value="major_revision">Major Revision</SelectItem>
-                                <SelectItem value="reject">Reject</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor="comments">Comments</Label>
-                            <Textarea
-                              id="comments"
-                              name="comments"
-                              rows={6}
-                              placeholder="Provide detailed feedback for the author..."
-                              required
-                            />
-                          </div>
-                          
-                          <Button type="submit" className="w-full" disabled={submittingReview}>
-                            {submittingReview ? 'Submitting...' : 'Submit Review'}
-                          </Button>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
+                <div className="text-2xl font-bold">{stats.total}</div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pending}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.completed}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+                <Clock className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-500">{stats.overdue}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-4">
+            {assignments.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No review assignments</h3>
+                  <p className="text-muted-foreground">
+                    You don't have any manuscripts to review at the moment
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              assignments.map((assignment) => (
+                <Card key={assignment.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">{assignment.manuscript.title}</CardTitle>
+                        <CardDescription>
+                          by {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
+                        </CardDescription>
+                        <CardDescription>
+                          Due: {new Date(assignment.due_date).toLocaleDateString()}
+                          {isOverdue(assignment.due_date) && (
+                            <span className="text-red-500 ml-2">(Overdue)</span>
+                          )}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(assignment.status)}>
+                          {assignment.status.replace('_', ' ')}
+                        </Badge>
+                        {assignment.rating && (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span className="text-sm">{assignment.rating}/5</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {assignment.manuscript.abstract}
+                    </p>
+                    
+                    {assignment.manuscript.keywords?.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm font-medium mb-2">Keywords:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {assignment.manuscript.keywords.map((keyword, index) => (
+                            <Badge key={index} variant="outline">
+                              {keyword}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {assignment.status === 'completed' && assignment.comments && (
+                      <div className="mb-4 p-3 bg-muted rounded-lg">
+                        <p className="text-sm font-medium mb-1">Your Review:</p>
+                        <p className="text-sm text-muted-foreground">{assignment.comments}</p>
+                        <p className="text-sm mt-2">
+                          <strong>Recommendation:</strong> {assignment.recommendation}
+                        </p>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Manuscript
+                      </Button>
+                      
+                      {assignment.status !== 'completed' && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm">Submit Review</Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Submit Review</DialogTitle>
+                            </DialogHeader>
+                            <form onSubmit={submitReview} className="space-y-4">
+                              <input type="hidden" name="reviewId" value={assignment.id} />
+                              
+                              <div>
+                                <Label htmlFor="rating">Rating (1-5)</Label>
+                                <Select name="rating" required>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select rating" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">1 - Poor</SelectItem>
+                                    <SelectItem value="2">2 - Fair</SelectItem>
+                                    <SelectItem value="3">3 - Good</SelectItem>
+                                    <SelectItem value="4">4 - Very Good</SelectItem>
+                                    <SelectItem value="5">5 - Excellent</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div>
+                                <Label htmlFor="recommendation">Recommendation</Label>
+                                <Select name="recommendation" required>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select recommendation" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="accept">Accept</SelectItem>
+                                    <SelectItem value="minor_revision">Minor Revision</SelectItem>
+                                    <SelectItem value="major_revision">Major Revision</SelectItem>
+                                    <SelectItem value="reject">Reject</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div>
+                                <Label htmlFor="comments">Comments</Label>
+                                <Textarea
+                                  id="comments"
+                                  name="comments"
+                                  rows={6}
+                                  placeholder="Provide detailed feedback for the author..."
+                                  required
+                                />
+                              </div>
+                              
+                              <Button type="submit" className="w-full" disabled={submittingReview}>
+                                {submittingReview ? 'Submitting...' : 'Submit Review'}
+                              </Button>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="submissions" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold">My Manuscript Submissions</h2>
+              <p className="text-muted-foreground">Manage your submitted manuscripts</p>
+            </div>
+            
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Submit New Manuscript
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Submit New Manuscript</DialogTitle>
+                  <DialogDescription>
+                    Upload your manuscript and cover letter for review.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmitManuscript} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Manuscript Title *</Label>
+                    <Input 
+                      id="title" 
+                      name="title" 
+                      placeholder="Enter the title of your manuscript"
+                      required 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="manuscriptFile">Upload Manuscript *</Label>
+                    <Input
+                      id="manuscriptFile"
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setManuscriptFile(e.target.files?.[0] || null)}
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Accepted formats: PDF, DOC, DOCX
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="coverLetterFile">Upload Cover Letter *</Label>
+                    <Input
+                      id="coverLetterFile"
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setCoverLetterFile(e.target.files?.[0] || null)}
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Accepted formats: PDF, DOC, DOCX
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={submittingManuscript || !manuscriptFile || !coverLetterFile}
+                  >
+                    {submittingManuscript ? (
+                      <>
+                        <Upload className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Submit Manuscript
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                My Manuscripts
+              </CardTitle>
+              <CardDescription>
+                Track the status of your submitted manuscripts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Submitted</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {manuscripts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          <div className="flex flex-col items-center gap-3">
+                            <FileText className="w-12 h-12 text-muted-foreground/50" />
+                            <span>No manuscripts submitted yet. Click "Submit New Manuscript" to get started.</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      manuscripts.map((manuscript) => (
+                        <TableRow key={manuscript.id}>
+                          <TableCell className="font-medium">
+                            {manuscript.title}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(manuscript.submission_date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getManuscriptStatusColor(manuscript.status)}>
+                              {manuscript.status.charAt(0).toUpperCase() + manuscript.status.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadFile(manuscript.file_path, manuscript.file_name)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
