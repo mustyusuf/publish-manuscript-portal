@@ -70,6 +70,7 @@ const AdminDashboard = () => {
     co_authors: [] as string[],
     admin_notes: ''
   });
+  const [manuscriptToDelete, setManuscriptToDelete] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -394,12 +395,14 @@ const AdminDashboard = () => {
     }
   };
 
-  const deleteManuscript = async (manuscriptId: string) => {
+  const confirmDeleteManuscript = async () => {
+    if (!manuscriptToDelete) return;
+    
     try {
       const { error } = await supabase
         .from('manuscripts')
         .delete()
-        .eq('id', manuscriptId);
+        .eq('id', manuscriptToDelete.id);
 
       if (error) throw error;
 
@@ -409,6 +412,7 @@ const AdminDashboard = () => {
       });
 
       fetchData();
+      setManuscriptToDelete(null);
     } catch (error) {
       console.error('Error deleting manuscript:', error);
       toast({
@@ -757,12 +761,7 @@ const AdminDashboard = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                // We'll use a simple confirm dialog for now
-                                if (window.confirm(`Are you sure you want to delete "${manuscript.title}"? This action cannot be undone.`)) {
-                                  deleteManuscript(manuscript.id);
-                                }
-                              }}
+                              onClick={() => setManuscriptToDelete(manuscript)}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete Manuscript
@@ -1081,6 +1080,32 @@ const AdminDashboard = () => {
           <UserProfile />
         </TabsContent>
       </Tabs>
+
+      {/* Manuscript Delete Confirmation Dialog */}
+      <AlertDialog open={!!manuscriptToDelete} onOpenChange={() => setManuscriptToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Manuscript Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{manuscriptToDelete?.title}"?
+              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                <p className="text-sm text-red-800 dark:text-red-200">
+                  ⚠️ This action cannot be undone. All associated files and data will be permanently deleted.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteManuscript}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Manuscript
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
