@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Users, Shield, Edit, Save } from 'lucide-react';
+import AddUserDialog from './AddUserDialog';
 
 interface UserProfile {
   user_id: string;
@@ -19,7 +20,7 @@ interface UserProfile {
 
 interface UserRole {
   user_id: string;
-  role: 'admin' | 'author' | 'reviewer';
+  role: 'admin' | 'author' | 'reviewer' | 'super_admin';
 }
 
 const UserManagement = () => {
@@ -53,8 +54,8 @@ const UserManagement = () => {
       // Filter out any legacy editor roles and convert them to reviewer
       const filteredRoles = (rolesData || []).map(role => ({
         ...role,
-        role: role.role === 'editor' ? 'reviewer' as const : role.role as 'admin' | 'author' | 'reviewer'
-      })).filter(role => ['admin', 'author', 'reviewer'].includes(role.role));
+        role: role.role === 'editor' ? 'reviewer' as const : role.role as 'admin' | 'author' | 'reviewer' | 'super_admin'
+      })).filter(role => ['admin', 'author', 'reviewer', 'super_admin'].includes(role.role));
       setUserRoles(filteredRoles);
     } catch (error) {
       console.error('Error fetching users and roles:', error);
@@ -124,6 +125,8 @@ const UserManagement = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
+      case 'super_admin':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       case 'admin':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'reviewer':
@@ -137,6 +140,8 @@ const UserManagement = () => {
 
   const getRoleDescription = (role: string) => {
     switch (role) {
+      case 'super_admin':
+        return 'Ultimate system access with visibility to all users';
       case 'admin':
         return 'Full system access and user management';
       case 'reviewer':
@@ -163,13 +168,18 @@ const UserManagement = () => {
     <div className="space-y-6">
       <Card className="academic-shadow">
         <CardHeader>
-          <CardTitle className="text-primary flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            User Management
-          </CardTitle>
-          <CardDescription>
-            Manage user roles and permissions. Reviewers can both submit manuscripts and review assigned papers.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-primary flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                User Management
+              </CardTitle>
+              <CardDescription>
+                Manage user roles and permissions. Reviewers can both submit manuscripts and review assigned papers.
+              </CardDescription>
+            </div>
+            <AddUserDialog onUserAdded={fetchUsersAndRoles} />
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -206,35 +216,39 @@ const UserManagement = () => {
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{user.institution || 'Not provided'}</TableCell>
-                        <TableCell>
-                          <Badge className={getRoleColor(currentRole)}>
-                            <Shield className="w-3 h-3 mr-1" />
-                            {currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={currentRole}
-                              onValueChange={(newRole: 'admin' | 'author' | 'reviewer') => 
-                                updateUserRole(user.user_id, newRole)
-                              }
-                              disabled={isUpdating}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="reviewer">Reviewer</SelectItem>
-                                <SelectItem value="author">Author</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {isUpdating && (
-                              <Save className="w-4 h-4 text-muted-foreground animate-spin" />
-                            )}
-                          </div>
-                        </TableCell>
+                         <TableCell>
+                           <Badge className={getRoleColor(currentRole)}>
+                             <Shield className="w-3 h-3 mr-1" />
+                             {currentRole === 'super_admin' ? 'Super Admin' : currentRole.charAt(0).toUpperCase() + currentRole.slice(1)}
+                           </Badge>
+                         </TableCell>
+                         <TableCell>
+                           {currentRole === 'super_admin' ? (
+                             <span className="text-sm text-muted-foreground">Non-editable</span>
+                           ) : (
+                             <div className="flex items-center gap-2">
+                               <Select
+                                 value={currentRole}
+                                 onValueChange={(newRole: 'admin' | 'author' | 'reviewer') => 
+                                   updateUserRole(user.user_id, newRole)
+                                 }
+                                 disabled={isUpdating}
+                               >
+                                 <SelectTrigger className="w-32">
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="admin">Admin</SelectItem>
+                                   <SelectItem value="reviewer">Reviewer</SelectItem>
+                                   <SelectItem value="author">Author</SelectItem>
+                                 </SelectContent>
+                               </Select>
+                               {isUpdating && (
+                                 <Save className="w-4 h-4 text-muted-foreground animate-spin" />
+                               )}
+                             </div>
+                           )}
+                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground max-w-48">
                           {getRoleDescription(currentRole)}
                         </TableCell>
@@ -263,13 +277,28 @@ const UserManagement = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                  <Shield className="w-3 h-3 mr-1" />
+                  Super Admin
+                </Badge>
+              </div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Ultimate system access</li>
+                <li>• View all users including admins</li>
+                <li>• Cannot be edited by regular admins</li>
+                <li>• All admin privileges plus more</li>
+              </ul>
+            </div>
+            
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
                 <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
                   <Shield className="w-3 h-3 mr-1" />
                   Admin
                 </Badge>
               </div>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Manage all user roles</li>
+                <li>• Manage user roles (except super admins)</li>
                 <li>• View all manuscripts</li>
                 <li>• Assign reviewers</li>
                 <li>• Make final decisions</li>
