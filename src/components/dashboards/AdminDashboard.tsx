@@ -103,15 +103,24 @@ const AdminDashboard = () => {
         .select('user_id, first_name, last_name, email')
         .in('user_id', authorIds);
 
-      if (authorsError) throw authorsError;
+      if (authorsError) {
+        console.error('Authors error:', authorsError);
+        throw authorsError;
+      }
+      console.log('Authors data:', authorsData);
 
       // Fetch reviewers
+      console.log('Fetching reviewers...');
       const { data: reviewerRoles, error: reviewerRolesError } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'reviewer');
 
-      if (reviewerRolesError) throw reviewerRolesError;
+      if (reviewerRolesError) {
+        console.error('Reviewer roles error:', reviewerRolesError);
+        throw reviewerRolesError;
+      }
+      console.log('Reviewer roles:', reviewerRoles);
 
       const reviewerIds = reviewerRoles?.map(r => r.user_id) || [];
       const { data: reviewersData, error: reviewersError } = await supabase
@@ -119,7 +128,11 @@ const AdminDashboard = () => {
         .select('user_id, first_name, last_name, email, expertise_areas')
         .in('user_id', reviewerIds);
 
-      if (reviewersError) throw reviewersError;
+      if (reviewersError) {
+        console.error('Reviewers error:', reviewersError);
+        throw reviewersError;
+      }
+      console.log('Reviewers data:', reviewersData);
 
       // Transform manuscripts with author data
       const transformedManuscripts = manuscriptsData?.map(m => {
@@ -167,15 +180,18 @@ const AdminDashboard = () => {
       const completed = manuscriptsData?.filter(m => ['accepted', 'rejected'].includes(m.status)).length || 0;
 
       setStats({ total, pending, underReview, completed });
-    } catch (error) {
+      console.log('Dashboard data fetch completed successfully');
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+      console.error('Error details:', error.message, error.code);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data.",
+        description: `Failed to load dashboard data: ${error.message}`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
+      console.log('Setting loading to false');
     }
   };
 

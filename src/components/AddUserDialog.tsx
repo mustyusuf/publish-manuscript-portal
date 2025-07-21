@@ -42,6 +42,8 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
     setLoading(true);
 
     try {
+      console.log('Creating user with data:', formData);
+      
       // Create user account
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
@@ -53,7 +55,11 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
         }
       });
 
-      if (authError) throw authError;
+      console.log('Auth result:', { authData, authError });
+      if (authError) {
+        console.error('Auth error details:', authError);
+        throw authError;
+      }
 
       if (!authData.user) {
         throw new Error('Failed to create user');
