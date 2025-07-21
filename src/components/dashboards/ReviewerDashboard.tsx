@@ -236,7 +236,6 @@ const ReviewerDashboard = () => {
     try {
       const formData = new FormData(e.currentTarget);
       const reviewId = formData.get('reviewId') as string;
-      const rating = parseInt(formData.get('rating') as string);
       const recommendation = formData.get('recommendation') as string;
       const comments = formData.get('comments') as string;
 
@@ -272,13 +271,12 @@ const ReviewerDashboard = () => {
       const { error } = await supabase
         .from('reviews')
         .update({
-          rating,
           recommendation,
           comments,
           status: 'completed',
           completed_date: new Date().toISOString(),
-          // Store file paths in admin_notes for now (could be separate columns)
-          ...(assessmentFilePath && { admin_notes: `Assessment: ${assessmentFilePath}${reviewedManuscriptPath ? `, Reviewed: ${reviewedManuscriptPath}` : ''}` })
+          assessment_file_path: assessmentFilePath || null,
+          reviewed_manuscript_path: reviewedManuscriptPath || null
         })
         .eq('id', reviewId);
 
@@ -521,14 +519,13 @@ DATE: ________________
                       <TableHead className="font-semibold text-primary min-w-[150px]">Author</TableHead>
                       <TableHead className="font-semibold text-primary min-w-[120px]">Due Date</TableHead>
                       <TableHead className="font-semibold text-primary min-w-[100px]">Status</TableHead>
-                      <TableHead className="font-semibold text-primary min-w-[100px]">Rating</TableHead>
                       <TableHead className="font-semibold text-primary min-w-[200px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {assignments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                           <div className="flex flex-col items-center gap-3">
                             <FileText className="w-12 h-12 text-muted-foreground/50" />
                             <span>No review assignments yet. You'll see manuscripts assigned to you here.</span>
@@ -566,28 +563,82 @@ DATE: ________________
                               {assignment.status.replace('_', ' ')}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            {assignment.rating ? (
-                              <div className="flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="text-sm">{assignment.rating}/5</span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Not rated</span>
-                            )}
-                          </TableCell>
                            <TableCell>
-                             <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                               <Button
-                                 variant="outline"
-                                 size="sm"
-                                 onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
-                                 className="w-full sm:w-auto"
-                               >
-                                 <Eye className="h-4 w-4 mr-1" />
-                                 <span className="hidden sm:inline">View</span>
-                                 <span className="sm:hidden">View Manuscript</span>
-                               </Button>
+                              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      <span className="hidden sm:inline">View</span>
+                                      <span className="sm:hidden">View Manuscript</span>
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-[95vw] sm:max-w-lg">
+                                    <DialogHeader>
+                                      <DialogTitle>Document Information</DialogTitle>
+                                      <DialogDescription>
+                                        Manuscript assigned for review
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-4">
+                                      <div className="bg-muted p-4 rounded-lg space-y-3">
+                                        <div>
+                                          <strong className="text-sm">Title:</strong>
+                                          <p className="text-sm mt-1">{assignment.manuscript.title}</p>
+                                        </div>
+                                        <div>
+                                          <strong className="text-sm">Author:</strong>
+                                          <p className="text-sm mt-1">
+                                            {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <strong className="text-sm">File:</strong>
+                                          <p className="text-sm mt-1">{assignment.manuscript.file_name}</p>
+                                        </div>
+                                        <div>
+                                          <strong className="text-sm">Due Date:</strong>
+                                          <p className="text-sm mt-1">{new Date(assignment.due_date).toLocaleDateString()}</p>
+                                        </div>
+                                        {assignment.manuscript.abstract && (
+                                          <div>
+                                            <strong className="text-sm">Abstract:</strong>
+                                            <p className="text-sm mt-1">{assignment.manuscript.abstract}</p>
+                                          </div>
+                                        )}
+                                        {assignment.manuscript.keywords?.length > 0 && (
+                                          <div>
+                                            <strong className="text-sm">Keywords:</strong>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {assignment.manuscript.keywords.map((keyword, index) => (
+                                                <Badge key={index} variant="outline" className="text-xs">
+                                                  {keyword}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-col sm:flex-row gap-2">
+                                        <Button
+                                          onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
+                                          className="flex-1"
+                                        >
+                                          <Download className="h-4 w-4 mr-2" />
+                                          Download Manuscript
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          onClick={downloadAssessmentForm}
+                                          className="flex-1"
+                                        >
+                                          <FileDown className="h-4 w-4 mr-2" />
+                                          Assessment Template
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
                                
                                <Button
                                  variant="outline"
@@ -618,38 +669,23 @@ DATE: ________________
                                      <form onSubmit={submitReview} className="space-y-4 p-1">
                                        <input type="hidden" name="reviewId" value={assignment.id} />
                                        
-                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                          <Label htmlFor="rating">Rating (1-5)</Label>
-                                          <Select name="rating" required>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select rating" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="1">1 - Poor</SelectItem>
-                                              <SelectItem value="2">2 - Fair</SelectItem>
-                                              <SelectItem value="3">3 - Good</SelectItem>
-                                              <SelectItem value="4">4 - Very Good</SelectItem>
-                                              <SelectItem value="5">5 - Excellent</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        
-                                        <div>
-                                          <Label htmlFor="recommendation">Recommendation</Label>
-                                          <Select name="recommendation" required>
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select recommendation" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="accept">Accept</SelectItem>
-                                              <SelectItem value="minor_revision">Minor Revision</SelectItem>
-                                              <SelectItem value="major_revision">Major Revision</SelectItem>
-                                              <SelectItem value="reject">Reject</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </div>
+                                           <Label htmlFor="recommendation">Recommendation</Label>
+                                           <Select name="recommendation" required>
+                                             <SelectTrigger>
+                                               <SelectValue placeholder="Select recommendation" />
+                                             </SelectTrigger>
+                                             <SelectContent>
+                                               <SelectItem value="Internal Review">Internal Review</SelectItem>
+                                               <SelectItem value="External Review">External Review</SelectItem>
+                                               <SelectItem value="Reject">Reject</SelectItem>
+                                               <SelectItem value="Accept without correction">Accept without correction</SelectItem>
+                                               <SelectItem value="Accept subject to minor corrections">Accept subject to minor corrections</SelectItem>
+                                               <SelectItem value="Accept subject to major corrections">Accept subject to major corrections</SelectItem>
+                                               <SelectItem value="Published">Published</SelectItem>
+                                             </SelectContent>
+                                           </Select>
+                                         </div>
                                       
                                        <div>
                                          <Label htmlFor="comments">Detailed Comments</Label>

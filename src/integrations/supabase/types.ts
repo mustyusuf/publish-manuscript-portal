@@ -118,6 +118,7 @@ export type Database = {
       }
       reviews: {
         Row: {
+          assessment_file_path: string | null
           assigned_date: string
           comments: string | null
           completed_date: string | null
@@ -127,11 +128,13 @@ export type Database = {
           manuscript_id: string
           rating: number | null
           recommendation: string | null
+          reviewed_manuscript_path: string | null
           reviewer_id: string
           status: Database["public"]["Enums"]["review_status"]
           updated_at: string
         }
         Insert: {
+          assessment_file_path?: string | null
           assigned_date?: string
           comments?: string | null
           completed_date?: string | null
@@ -141,11 +144,13 @@ export type Database = {
           manuscript_id: string
           rating?: number | null
           recommendation?: string | null
+          reviewed_manuscript_path?: string | null
           reviewer_id: string
           status?: Database["public"]["Enums"]["review_status"]
           updated_at?: string
         }
         Update: {
+          assessment_file_path?: string | null
           assigned_date?: string
           comments?: string | null
           completed_date?: string | null
@@ -155,6 +160,7 @@ export type Database = {
           manuscript_id?: string
           rating?: number | null
           recommendation?: string | null
+          reviewed_manuscript_path?: string | null
           reviewer_id?: string
           status?: Database["public"]["Enums"]["review_status"]
           updated_at?: string
