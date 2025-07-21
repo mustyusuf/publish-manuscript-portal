@@ -8,12 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Building, BookOpen, Plus, X } from 'lucide-react';
+import { User, Mail, Building, BookOpen, Plus, X, Lock } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const UserProfile = () => {
   const { user, profile, userRole } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [expertiseInput, setExpertiseInput] = useState('');
   const [formData, setFormData] = useState({
     first_name: '',
@@ -89,6 +91,33 @@ const UserProfile = () => {
       ...formData,
       expertise_areas: formData.expertise_areas.filter(a => a !== area),
     });
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) return;
+    
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your email for password reset instructions.",
+      });
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send password reset email.",
+        variant: "destructive",
+      });
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const getRoleDescription = (role: string) => {
@@ -183,9 +212,40 @@ const UserProfile = () => {
                 </p>
               </div>
               
-              <Button onClick={() => setIsEditing(true)} className="w-full">
-                Edit Profile
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setIsEditing(true)} className="flex-1">
+                  Edit Profile
+                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex-1">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Reset Password
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Reset Password</DialogTitle>
+                      <DialogDescription>
+                        We'll send a password reset link to your email address.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
+                        <p className="text-sm">{user?.email}</p>
+                      </div>
+                      <Button
+                        onClick={handlePasswordReset}
+                        disabled={resettingPassword}
+                        className="w-full"
+                      >
+                        {resettingPassword ? 'Sending...' : 'Send Reset Email'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

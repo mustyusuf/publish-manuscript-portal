@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings } from 'lucide-react';
 import UserManagement from '@/components/UserManagement';
+import UserProfile from '@/components/UserProfile';
 
 interface Manuscript {
   id: string;
@@ -231,9 +232,10 @@ const AdminDashboard = () => {
       </div>
 
       <Tabs defaultValue="manuscripts" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="manuscripts">Manuscript Management</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
         
         <TabsContent value="manuscripts" className="space-y-6">
@@ -319,48 +321,73 @@ const AdminDashboard = () => {
                               Assign Reviewers
                             </Button>
                           </DialogTrigger>
-                          <DialogContent>
+                          <DialogContent className="max-w-2xl">
                             <DialogHeader>
-                              <DialogTitle>Assign Reviewers</DialogTitle>
+                              <DialogTitle>Assign Reviewers to "{manuscript.title}"</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
-                                <label className="text-sm font-medium">Select Reviewers</label>
-                                <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
-                                  {reviewers.map((reviewer) => (
-                                    <div key={reviewer.id} className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
-                                        id={reviewer.id}
-                                        checked={selectedReviewers.includes(reviewer.id)}
-                                        onChange={(e) => {
-                                          if (e.target.checked) {
-                                            setSelectedReviewers([...selectedReviewers, reviewer.id]);
-                                          } else {
-                                            setSelectedReviewers(selectedReviewers.filter(id => id !== reviewer.id));
-                                          }
-                                        }}
-                                        className="rounded border-gray-300"
-                                      />
-                                      <label htmlFor={reviewer.id} className="text-sm cursor-pointer">
-                                        {reviewer.first_name} {reviewer.last_name}
-                                        {reviewer.expertise_areas?.length > 0 && (
-                                          <span className="text-xs text-muted-foreground ml-2">
-                                            ({reviewer.expertise_areas.join(', ')})
-                                          </span>
-                                        )}
-                                      </label>
-                                    </div>
-                                  ))}
+                                <label className="text-sm font-medium">
+                                  Select Reviewers ({selectedReviewers.length} selected)
+                                </label>
+                                <div className="space-y-3 mt-3 max-h-64 overflow-y-auto border rounded-lg p-3">
+                                  {reviewers.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                      No reviewers available. Add users with reviewer role first.
+                                    </p>
+                                  ) : (
+                                    reviewers.map((reviewer) => (
+                                      <div key={reviewer.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50">
+                                        <input
+                                          type="checkbox"
+                                          id={reviewer.id}
+                                          checked={selectedReviewers.includes(reviewer.id)}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setSelectedReviewers([...selectedReviewers, reviewer.id]);
+                                            } else {
+                                              setSelectedReviewers(selectedReviewers.filter(id => id !== reviewer.id));
+                                            }
+                                          }}
+                                          className="mt-1 rounded border-gray-300"
+                                        />
+                                        <label htmlFor={reviewer.id} className="text-sm cursor-pointer flex-1">
+                                          <div className="font-medium">
+                                            {reviewer.first_name} {reviewer.last_name}
+                                          </div>
+                                          <div className="text-xs text-muted-foreground">
+                                            {reviewer.email}
+                                          </div>
+                                          {reviewer.expertise_areas?.length > 0 && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                              <span className="font-medium">Expertise:</span> {reviewer.expertise_areas.join(', ')}
+                                            </div>
+                                          )}
+                                        </label>
+                                      </div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
-                              <Button 
-                                onClick={assignReviewers} 
-                                className="w-full"
-                                disabled={selectedReviewers.length === 0}
-                              >
-                                Assign {selectedReviewers.length} Reviewer(s)
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button 
+                                  onClick={assignReviewers} 
+                                  className="flex-1"
+                                  disabled={selectedReviewers.length === 0}
+                                >
+                                  Assign {selectedReviewers.length} Reviewer(s)
+                                </Button>
+                                <Button 
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedManuscript('');
+                                    setSelectedReviewers([]);
+                                  }}
+                                  className="flex-1"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
                             </div>
                           </DialogContent>
                         </Dialog>
@@ -396,6 +423,10 @@ const AdminDashboard = () => {
         
         <TabsContent value="users">
           <UserManagement />
+        </TabsContent>
+        
+        <TabsContent value="profile">
+          <UserProfile />
         </TabsContent>
       </Tabs>
     </div>

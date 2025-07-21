@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, Clock, CheckCircle, Star, Eye, Upload, Download, Plus, FileDown } from 'lucide-react';
+import UserProfile from '@/components/UserProfile';
 
 interface ReviewAssignment {
   id: string;
@@ -450,9 +451,10 @@ DATE: ________________
       </div>
 
       <Tabs defaultValue="reviews" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="reviews">Review Assignments</TabsTrigger>
           <TabsTrigger value="submissions">My Submissions</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
         
         <TabsContent value="reviews" className="space-y-6">
@@ -889,6 +891,10 @@ DATE: ________________
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="profile">
+          <UserProfile />
         </TabsContent>
       </Tabs>
     </div>

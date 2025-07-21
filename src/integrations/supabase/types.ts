@@ -20,6 +20,9 @@ export type Database = {
           admin_notes: string | null
           author_id: string
           co_authors: string[] | null
+          cover_letter_name: string | null
+          cover_letter_path: string | null
+          cover_letter_size: number | null
           created_at: string
           decision_date: string | null
           file_name: string | null
@@ -37,6 +40,9 @@ export type Database = {
           admin_notes?: string | null
           author_id: string
           co_authors?: string[] | null
+          cover_letter_name?: string | null
+          cover_letter_path?: string | null
+          cover_letter_size?: number | null
           created_at?: string
           decision_date?: string | null
           file_name?: string | null
@@ -54,6 +60,9 @@ export type Database = {
           admin_notes?: string | null
           author_id?: string
           co_authors?: string[] | null
+          cover_letter_name?: string | null
+          cover_letter_path?: string | null
+          cover_letter_size?: number | null
           created_at?: string
           decision_date?: string | null
           file_name?: string | null

@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import UserProfile from '@/components/UserProfile';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +22,8 @@ interface Manuscript {
   submission_date: string;
   file_name: string;
   file_path: string;
+  cover_letter_path?: string;
+  cover_letter_name?: string;
   keywords: string[];
 }
 
@@ -123,6 +127,9 @@ const AuthorDashboard = () => {
           file_path: manuscriptFileName,
           file_name: manuscriptFile.name,
           file_size: manuscriptFile.size,
+          cover_letter_path: coverLetterFileName,
+          cover_letter_name: coverLetterFile.name,
+          cover_letter_size: coverLetterFile.size,
         });
 
       if (insertError) throw insertError;
@@ -152,11 +159,13 @@ const AuthorDashboard = () => {
 
   const fetchManuscriptReviews = async (manuscriptId: string) => {
     try {
+      // Only fetch completed reviews that are assigned to the author
       const { data: reviews, error } = await supabase
         .from('reviews')
         .select('*')
         .eq('manuscript_id', manuscriptId)
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .not('completed_date', 'is', null); // Only show reviews that are actually completed
 
       if (error) {
         console.error('Error fetching reviews:', error);
@@ -268,11 +277,18 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary">Author Dashboard</h1>
-          <p className="text-muted-foreground">Manage your manuscript submissions for AIPM</p>
-        </div>
+      <Tabs defaultValue="manuscripts" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manuscripts">Manuscripts</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="manuscripts" className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary">Author Dashboard</h1>
+              <p className="text-muted-foreground">Manage your manuscript submissions for AIPM</p>
+            </div>
         
         <Dialog>
           <DialogTrigger asChild>
@@ -462,7 +478,7 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                 <p className="text-sm text-muted-foreground">{selectedManuscript.abstract}</p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {selectedManuscript.file_path && (
                   <Button
                     variant="outline"
@@ -470,6 +486,15 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                   >
                     <Download className="mr-2 h-4 w-4" />
                     Download Manuscript
+                  </Button>
+                )}
+                {selectedManuscript.cover_letter_path && (
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadFile(selectedManuscript.cover_letter_path!, selectedManuscript.cover_letter_name || 'cover-letter.pdf')}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Cover Letter
                   </Button>
                 )}
               </div>
@@ -528,6 +553,12 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
           )}
         </DialogContent>
       </Dialog>
+        </TabsContent>
+        
+        <TabsContent value="profile">
+          <UserProfile />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
