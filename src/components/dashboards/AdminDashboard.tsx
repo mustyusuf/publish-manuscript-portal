@@ -41,7 +41,7 @@ const AdminDashboard = () => {
     completed: 0,
   });
   const [selectedManuscript, setSelectedManuscript] = useState<string>('');
-  const [selectedReviewer, setSelectedReviewer] = useState<string>('');
+  const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -68,11 +68,11 @@ const AdminDashboard = () => {
 
       if (authorsError) throw authorsError;
 
-      // Fetch reviewers
+      // Fetch reviewers (including editors who can also review)
       const { data: reviewerRoles, error: reviewerRolesError } = await supabase
         .from('user_roles')
         .select('user_id')
-        .eq('role', 'reviewer');
+        .in('role', ['reviewer', 'editor']);
 
       if (reviewerRolesError) throw reviewerRolesError;
 
@@ -132,20 +132,23 @@ const AdminDashboard = () => {
     }
   };
 
-  const assignReviewer = async () => {
-    if (!selectedManuscript || !selectedReviewer) return;
+  const assignReviewers = async () => {
+    if (!selectedManuscript || selectedReviewers.length === 0) return;
 
     try {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // 2 weeks from now
 
+      // Insert multiple review assignments
+      const reviewInserts = selectedReviewers.map(reviewerId => ({
+        manuscript_id: selectedManuscript,
+        reviewer_id: reviewerId,
+        due_date: dueDate.toISOString(),
+      }));
+
       const { error } = await supabase
         .from('reviews')
-        .insert({
-          manuscript_id: selectedManuscript,
-          reviewer_id: selectedReviewer,
-          due_date: dueDate.toISOString(),
-        });
+        .insert(reviewInserts);
 
       if (error) throw error;
 
@@ -157,17 +160,17 @@ const AdminDashboard = () => {
 
       toast({
         title: "Success",
-        description: "Reviewer assigned successfully.",
+        description: `${selectedReviewers.length} reviewer(s) assigned successfully.`,
       });
 
       setSelectedManuscript('');
-      setSelectedReviewer('');
+      setSelectedReviewers([]);
       fetchData();
     } catch (error) {
-      console.error('Error assigning reviewer:', error);
+      console.error('Error assigning reviewers:', error);
       toast({
         title: "Error",
-        description: "Failed to assign reviewer.",
+        description: "Failed to assign reviewers.",
         variant: "destructive",
       });
     }
@@ -308,35 +311,55 @@ const AdminDashboard = () => {
                       {manuscript.status === 'submitted' && (
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button size="sm" onClick={() => setSelectedManuscript(manuscript.id)}>
+                           <Button size="sm" onClick={() => {
+                              setSelectedManuscript(manuscript.id);
+                              setSelectedReviewers([]);
+                            }}>
                               <UserPlus className="h-4 w-4 mr-1" />
-                              Assign Reviewer
+                              Assign Reviewers
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Assign Reviewer</DialogTitle>
+                              <DialogTitle>Assign Reviewers</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
-                              <Select onValueChange={setSelectedReviewer}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a reviewer" />
-                                </SelectTrigger>
-                                <SelectContent>
+                              <div>
+                                <label className="text-sm font-medium">Select Reviewers</label>
+                                <div className="space-y-2 mt-2 max-h-48 overflow-y-auto">
                                   {reviewers.map((reviewer) => (
-                                    <SelectItem key={reviewer.id} value={reviewer.id}>
-                                      {reviewer.first_name} {reviewer.last_name}
-                                      {reviewer.expertise_areas?.length > 0 && (
-                                        <span className="text-xs text-muted-foreground ml-2">
-                                          ({reviewer.expertise_areas.join(', ')})
-                                        </span>
-                                      )}
-                                    </SelectItem>
+                                    <div key={reviewer.id} className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        id={reviewer.id}
+                                        checked={selectedReviewers.includes(reviewer.id)}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedReviewers([...selectedReviewers, reviewer.id]);
+                                          } else {
+                                            setSelectedReviewers(selectedReviewers.filter(id => id !== reviewer.id));
+                                          }
+                                        }}
+                                        className="rounded border-gray-300"
+                                      />
+                                      <label htmlFor={reviewer.id} className="text-sm cursor-pointer">
+                                        {reviewer.first_name} {reviewer.last_name}
+                                        {reviewer.expertise_areas?.length > 0 && (
+                                          <span className="text-xs text-muted-foreground ml-2">
+                                            ({reviewer.expertise_areas.join(', ')})
+                                          </span>
+                                        )}
+                                      </label>
+                                    </div>
                                   ))}
-                                </SelectContent>
-                              </Select>
-                              <Button onClick={assignReviewer} className="w-full">
-                                Assign Reviewer
+                                </div>
+                              </div>
+                              <Button 
+                                onClick={assignReviewers} 
+                                className="w-full"
+                                disabled={selectedReviewers.length === 0}
+                              >
+                                Assign {selectedReviewers.length} Reviewer(s)
                               </Button>
                             </div>
                           </DialogContent>
