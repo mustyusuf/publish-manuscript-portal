@@ -397,152 +397,190 @@ const ReviewerDashboard = () => {
             </Card>
           </div>
 
-          <div className="grid gap-4">
-            {assignments.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No review assignments</h3>
-                  <p className="text-muted-foreground">
-                    You don't have any manuscripts to review at the moment
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              assignments.map((assignment) => (
-                <Card key={assignment.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{assignment.manuscript.title}</CardTitle>
-                        <CardDescription>
-                          by {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
-                        </CardDescription>
-                        <CardDescription>
-                          Due: {new Date(assignment.due_date).toLocaleDateString()}
-                          {isOverdue(assignment.due_date) && (
-                            <span className="text-red-500 ml-2">(Overdue)</span>
-                          )}
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={getStatusColor(assignment.status)}>
-                          {assignment.status.replace('_', ' ')}
-                        </Badge>
-                        {assignment.rating && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="text-sm">{assignment.rating}/5</span>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-primary flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Review Assignments
+              </CardTitle>
+              <CardDescription>
+                Track and submit reviews for assigned manuscripts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-secondary/50">
+                    <TableRow>
+                      <TableHead className="font-semibold text-primary">S/N</TableHead>
+                      <TableHead className="font-semibold text-primary">Manuscript ID</TableHead>
+                      <TableHead className="font-semibold text-primary">Title</TableHead>
+                      <TableHead className="font-semibold text-primary">Author</TableHead>
+                      <TableHead className="font-semibold text-primary">Due Date</TableHead>
+                      <TableHead className="font-semibold text-primary">Status</TableHead>
+                      <TableHead className="font-semibold text-primary">Rating</TableHead>
+                      <TableHead className="font-semibold text-primary">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
+                          <div className="flex flex-col items-center gap-3">
+                            <FileText className="w-12 h-12 text-muted-foreground/50" />
+                            <span>No review assignments yet. You'll see manuscripts assigned to you here.</span>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {assignment.manuscript.abstract}
-                    </p>
-                    
-                    {assignment.manuscript.keywords?.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-sm font-medium mb-2">Keywords:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {assignment.manuscript.keywords.map((keyword, index) => (
-                            <Badge key={index} variant="outline">
-                              {keyword}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      assignments.map((assignment, index) => (
+                        <TableRow key={assignment.id}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {assignment.manuscript.id?.slice(0, 8)}...
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {assignment.manuscript.title}
+                          </TableCell>
+                          <TableCell>
+                            {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span>{new Date(assignment.due_date).toLocaleDateString()}</span>
+                              {isOverdue(assignment.due_date) && (
+                                <span className="text-red-500 text-xs">(Overdue)</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(assignment.status)}>
+                              {assignment.status.replace('_', ' ')}
                             </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {assignment.status === 'completed' && assignment.comments && (
-                      <div className="mb-4 p-3 bg-muted rounded-lg">
-                        <p className="text-sm font-medium mb-1">Your Review:</p>
-                        <p className="text-sm text-muted-foreground">{assignment.comments}</p>
-                        <p className="text-sm mt-2">
-                          <strong>Recommendation:</strong> {assignment.recommendation}
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between items-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Manuscript
-                      </Button>
-                      
-                      {assignment.status !== 'completed' && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm">Submit Review</Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Submit Review</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={submitReview} className="space-y-4">
-                              <input type="hidden" name="reviewId" value={assignment.id} />
-                              
-                              <div>
-                                <Label htmlFor="rating">Rating (1-5)</Label>
-                                <Select name="rating" required>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select rating" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1">1 - Poor</SelectItem>
-                                    <SelectItem value="2">2 - Fair</SelectItem>
-                                    <SelectItem value="3">3 - Good</SelectItem>
-                                    <SelectItem value="4">4 - Very Good</SelectItem>
-                                    <SelectItem value="5">5 - Excellent</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                          </TableCell>
+                          <TableCell>
+                            {assignment.rating ? (
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                <span className="text-sm">{assignment.rating}/5</span>
                               </div>
-                              
-                              <div>
-                                <Label htmlFor="recommendation">Recommendation</Label>
-                                <Select name="recommendation" required>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select recommendation" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="accept">Accept</SelectItem>
-                                    <SelectItem value="minor_revision">Minor Revision</SelectItem>
-                                    <SelectItem value="major_revision">Major Revision</SelectItem>
-                                    <SelectItem value="reject">Reject</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              
-                              <div>
-                                <Label htmlFor="comments">Comments</Label>
-                                <Textarea
-                                  id="comments"
-                                  name="comments"
-                                  rows={6}
-                                  placeholder="Provide detailed feedback for the author..."
-                                  required
-                                />
-                              </div>
-                              
-                              <Button type="submit" className="w-full" disabled={submittingReview}>
-                                {submittingReview ? 'Submitting...' : 'Submit Review'}
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Not rated</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
                               </Button>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                              
+                              {assignment.status !== 'completed' ? (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button size="sm">
+                                      Submit Review
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-2xl">
+                                    <DialogHeader>
+                                      <DialogTitle>Submit Review for: {assignment.manuscript.title}</DialogTitle>
+                                      <DialogDescription>
+                                        Provide your detailed review and recommendation
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={submitReview} className="space-y-4">
+                                      <input type="hidden" name="reviewId" value={assignment.id} />
+                                      
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <Label htmlFor="rating">Rating (1-5)</Label>
+                                          <Select name="rating" required>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select rating" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="1">1 - Poor</SelectItem>
+                                              <SelectItem value="2">2 - Fair</SelectItem>
+                                              <SelectItem value="3">3 - Good</SelectItem>
+                                              <SelectItem value="4">4 - Very Good</SelectItem>
+                                              <SelectItem value="5">5 - Excellent</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        
+                                        <div>
+                                          <Label htmlFor="recommendation">Recommendation</Label>
+                                          <Select name="recommendation" required>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select recommendation" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="accept">Accept</SelectItem>
+                                              <SelectItem value="minor_revision">Minor Revision</SelectItem>
+                                              <SelectItem value="major_revision">Major Revision</SelectItem>
+                                              <SelectItem value="reject">Reject</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+                                      
+                                      <div>
+                                        <Label htmlFor="comments">Detailed Comments</Label>
+                                        <Textarea
+                                          id="comments"
+                                          name="comments"
+                                          rows={6}
+                                          placeholder="Provide detailed feedback for the author, including strengths, weaknesses, and suggestions for improvement..."
+                                          required
+                                        />
+                                      </div>
+                                      
+                                      <div className="bg-muted p-3 rounded-lg">
+                                        <h4 className="font-medium mb-2">Manuscript Details:</h4>
+                                        <p className="text-sm text-muted-foreground mb-2">
+                                          <strong>Abstract:</strong> {assignment.manuscript.abstract}
+                                        </p>
+                                        {assignment.manuscript.keywords?.length > 0 && (
+                                          <div>
+                                            <strong className="text-sm">Keywords:</strong>
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {assignment.manuscript.keywords.map((keyword, index) => (
+                                                <Badge key={index} variant="outline" className="text-xs">
+                                                  {keyword}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      <Button type="submit" className="w-full" disabled={submittingReview}>
+                                        {submittingReview ? 'Submitting Review...' : 'Submit Review'}
+                                      </Button>
+                                    </form>
+                                  </DialogContent>
+                                </Dialog>
+                              ) : (
+                                <Button variant="outline" size="sm" disabled>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Completed
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="submissions" className="space-y-6">
