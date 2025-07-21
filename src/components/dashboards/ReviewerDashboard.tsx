@@ -513,14 +513,14 @@ DATE: ________________
                 <Table>
                   <TableHeader className="bg-secondary/50">
                     <TableRow>
-                      <TableHead className="font-semibold text-primary">S/N</TableHead>
-                      <TableHead className="font-semibold text-primary">Manuscript ID</TableHead>
-                      <TableHead className="font-semibold text-primary">Title</TableHead>
-                      <TableHead className="font-semibold text-primary">Author</TableHead>
-                      <TableHead className="font-semibold text-primary">Due Date</TableHead>
-                      <TableHead className="font-semibold text-primary">Status</TableHead>
-                      <TableHead className="font-semibold text-primary">Rating</TableHead>
-                      <TableHead className="font-semibold text-primary">Actions</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[50px]">S/N</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[100px]">ID</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[200px]">Title</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[150px]">Author</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[120px]">Due Date</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[100px]">Status</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[100px]">Rating</TableHead>
+                      <TableHead className="font-semibold text-primary min-w-[200px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -536,15 +536,20 @@ DATE: ________________
                     ) : (
                       assignments.map((assignment, index) => (
                         <TableRow key={assignment.id}>
-                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell className="font-mono text-xs">
-                            {assignment.manuscript.id?.slice(0, 8)}...
+                            <span className="hidden sm:inline">{assignment.manuscript.id?.slice(0, 8)}...</span>
+                            <span className="sm:hidden">{assignment.manuscript.id?.slice(0, 6)}...</span>
                           </TableCell>
                           <TableCell className="font-medium">
-                            {assignment.manuscript.title}
+                            <div className="max-w-[200px] sm:max-w-none truncate" title={assignment.manuscript.title}>
+                              {assignment.manuscript.title}
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
+                            <div className="max-w-[150px] sm:max-w-none truncate">
+                              {assignment.manuscript.author.first_name} {assignment.manuscript.author.last_name}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col">
@@ -570,43 +575,48 @@ DATE: ________________
                             )}
                           </TableCell>
                            <TableCell>
-                             <div className="flex gap-2">
+                             <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                                <Button
                                  variant="outline"
                                  size="sm"
                                  onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
+                                 className="w-full sm:w-auto"
                                >
                                  <Eye className="h-4 w-4 mr-1" />
-                                 View
+                                 <span className="hidden sm:inline">View</span>
+                                 <span className="sm:hidden">View Manuscript</span>
                                </Button>
                                
                                <Button
                                  variant="outline"
                                  size="sm"
                                  onClick={downloadAssessmentForm}
+                                 className="w-full sm:w-auto"
                                >
                                  <FileDown className="h-4 w-4 mr-1" />
-                                 Form
+                                 <span className="hidden sm:inline">Form</span>
+                                 <span className="sm:hidden">Assessment Form</span>
                                </Button>
                                
                                {assignment.status !== 'completed' ? (
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button size="sm">
-                                      Submit Review
-                                    </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-2xl">
+                                 <Dialog>
+                                   <DialogTrigger asChild>
+                                     <Button size="sm" className="w-full sm:w-auto">
+                                       <span className="hidden sm:inline">Submit Review</span>
+                                       <span className="sm:hidden">Submit</span>
+                                     </Button>
+                                   </DialogTrigger>
+                                   <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                                     <DialogHeader>
                                       <DialogTitle>Submit Review for: {assignment.manuscript.title}</DialogTitle>
                                       <DialogDescription>
                                         Provide your detailed review and recommendation
                                       </DialogDescription>
                                     </DialogHeader>
-                                    <form onSubmit={submitReview} className="space-y-4">
-                                      <input type="hidden" name="reviewId" value={assignment.id} />
-                                      
-                                      <div className="grid grid-cols-2 gap-4">
+                                     <form onSubmit={submitReview} className="space-y-4 p-1">
+                                       <input type="hidden" name="reviewId" value={assignment.id} />
+                                       
+                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
                                           <Label htmlFor="rating">Rating (1-5)</Label>
                                           <Select name="rating" required>
@@ -703,10 +713,11 @@ DATE: ________________
                                     </form>
                                   </DialogContent>
                                 </Dialog>
-                              ) : (
-                                <Button variant="outline" size="sm" disabled>
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Completed
+                               ) : (
+                                 <Button variant="outline" size="sm" disabled className="w-full sm:w-auto">
+                                   <CheckCircle className="h-4 w-4 mr-1" />
+                                   <span className="hidden sm:inline">Completed</span>
+                                   <span className="sm:hidden">Done</span>
                                 </Button>
                               )}
                             </div>
@@ -722,7 +733,7 @@ DATE: ________________
         </TabsContent>
         
         <TabsContent value="submissions" className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
               <h2 className="text-xl font-semibold">My Manuscript Submissions</h2>
               <p className="text-muted-foreground">Manage your submitted manuscripts</p>
@@ -730,19 +741,20 @@ DATE: ________________
             
             <Dialog>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
-                  Submit New Manuscript
+                  <span className="hidden sm:inline">Submit New Manuscript</span>
+                  <span className="sm:hidden">New Manuscript</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Submit New Manuscript</DialogTitle>
                   <DialogDescription>
                     Upload your manuscript and cover letter for review.
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmitManuscript} className="space-y-4">
+                <form onSubmit={handleSubmitManuscript} className="space-y-4 p-1">
                   <div className="space-y-2">
                     <Label htmlFor="title">Manuscript Title *</Label>
                     <Input 
@@ -818,10 +830,10 @@ DATE: ________________
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Submitted</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="min-w-[200px]">Title</TableHead>
+                      <TableHead className="min-w-[120px]">Submitted</TableHead>
+                      <TableHead className="min-w-[100px]">Status</TableHead>
+                      <TableHead className="min-w-[120px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -838,14 +850,23 @@ DATE: ________________
                       manuscripts.map((manuscript) => (
                         <TableRow key={manuscript.id}>
                           <TableCell className="font-medium">
-                            {manuscript.title}
+                            <div className="max-w-[200px] sm:max-w-none truncate" title={manuscript.title}>
+                              {manuscript.title}
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {new Date(manuscript.submission_date).toLocaleDateString()}
+                            <div className="text-sm">
+                              {new Date(manuscript.submission_date).toLocaleDateString()}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getManuscriptStatusColor(manuscript.status)}>
-                              {manuscript.status.charAt(0).toUpperCase() + manuscript.status.slice(1)}
+                              <span className="hidden sm:inline">
+                                {manuscript.status.charAt(0).toUpperCase() + manuscript.status.slice(1)}
+                              </span>
+                              <span className="sm:hidden">
+                                {manuscript.status.split('_')[0]}
+                              </span>
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -853,9 +874,11 @@ DATE: ________________
                               variant="outline"
                               size="sm"
                               onClick={() => downloadFile(manuscript.file_path, manuscript.file_name)}
+                              className="w-full sm:w-auto"
                             >
                               <Download className="mr-2 h-4 w-4" />
-                              Download
+                              <span className="hidden sm:inline">Download</span>
+                              <span className="sm:hidden">Get</span>
                             </Button>
                           </TableCell>
                         </TableRow>
