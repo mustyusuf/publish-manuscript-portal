@@ -676,8 +676,6 @@ DATE: ________________
                                                <SelectValue placeholder="Select recommendation" />
                                              </SelectTrigger>
                                              <SelectContent>
-                                               <SelectItem value="Internal Review">Internal Review</SelectItem>
-                                               <SelectItem value="External Review">External Review</SelectItem>
                                                <SelectItem value="Reject">Reject</SelectItem>
                                                <SelectItem value="Accept without correction">Accept without correction</SelectItem>
                                                <SelectItem value="Accept subject to minor corrections">Accept subject to minor corrections</SelectItem>
