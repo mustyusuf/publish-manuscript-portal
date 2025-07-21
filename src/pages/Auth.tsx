@@ -101,12 +101,20 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Manuscript Review System</CardTitle>
-          <CardDescription>
-            Sign in to your account or create a new one
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 to-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md academic-shadow">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto w-32 h-32 mb-4">
+            <img 
+              src="/lovable-uploads/4f1bb596-8115-434e-b44d-9923671ada12.png" 
+              alt="AIPM - Annals of Ibadan Postgraduate Medicine" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <CardTitle className="text-2xl font-bold text-primary">AIPM Manuscript Portal</CardTitle>
+          <CardDescription className="text-base">
+            Annals of Ibadan Postgraduate Medicine<br />
+            Submit and manage your research manuscripts
           </CardDescription>
         </CardHeader>
         <CardContent>

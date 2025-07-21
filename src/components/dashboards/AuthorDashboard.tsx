@@ -256,27 +256,34 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-muted-foreground">Loading manuscripts...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Author Dashboard</h1>
-          <p className="text-muted-foreground">Manage your manuscript submissions</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary">Author Dashboard</h1>
+          <p className="text-muted-foreground">Manage your manuscript submissions for AIPM</p>
         </div>
         
         <Dialog>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto medical-gradient text-primary-foreground hover:opacity-90 transition-opacity">
               <Plus className="h-4 w-4 mr-2" />
               Submit New Manuscript
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl mx-4 sm:mx-auto">
             <DialogHeader>
-              <DialogTitle>Submit New Manuscript</DialogTitle>
+              <DialogTitle className="text-primary">Submit New Manuscript</DialogTitle>
               <DialogDescription>
                 Upload your manuscript and cover letter for review. A unique ID will be automatically generated for your submission.
               </DialogDescription>
@@ -320,14 +327,21 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                 </p>
               </div>
               
-              <Button type="submit" className="w-full" disabled={submitting || !manuscriptFile || !coverLetterFile}>
+              <Button 
+                type="submit" 
+                className="w-full medical-gradient text-primary-foreground hover:opacity-90 transition-opacity" 
+                disabled={submitting || !manuscriptFile || !coverLetterFile}
+              >
                 {submitting ? (
                   <>
                     <Upload className="mr-2 h-4 w-4 animate-spin" />
                     Submitting...
                   </>
                 ) : (
-                  'Submit Manuscript'
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Submit Manuscript
+                  </>
                 )}
               </Button>
             </form>
@@ -335,32 +349,38 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="academic-shadow">
         <CardHeader>
-          <CardTitle>My Manuscripts</CardTitle>
+          <CardTitle className="text-primary flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            My Manuscripts
+          </CardTitle>
           <CardDescription>
-            Track the status of your submitted manuscripts
+            Track the status of your submitted manuscripts to AIPM
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-secondary/50">
                 <TableRow>
-                  <TableHead>S/N</TableHead>
-                  <TableHead>File ID</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>View</TableHead>
-                  <TableHead>Reviewer</TableHead>
+                  <TableHead className="font-semibold text-primary">S/N</TableHead>
+                  <TableHead className="font-semibold text-primary">File ID</TableHead>
+                  <TableHead className="font-semibold text-primary">Title</TableHead>
+                  <TableHead className="font-semibold text-primary">Submitted</TableHead>
+                  <TableHead className="font-semibold text-primary">Status</TableHead>
+                  <TableHead className="font-semibold text-primary">View</TableHead>
+                  <TableHead className="font-semibold text-primary">Reviewer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {manuscripts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No manuscripts submitted yet. Click "Submit New Manuscript" to get started.
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                      <div className="flex flex-col items-center gap-3">
+                        <FileText className="w-12 h-12 text-muted-foreground/50" />
+                        <span>No manuscripts submitted yet. Click "Submit New Manuscript" to get started.</span>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (

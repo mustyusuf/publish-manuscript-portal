@@ -20,9 +20,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-secondary/10 to-background">
       <Header />
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {renderDashboard()}
       </main>
     </div>
