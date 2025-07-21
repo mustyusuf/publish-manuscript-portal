@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { FileText, Clock, CheckCircle, Star, Eye, Upload, Download, Plus, FileDown } from 'lucide-react';
 import UserProfile from '@/components/UserProfile';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 
 interface ReviewAssignment {
   id: string;
@@ -365,69 +366,235 @@ const ReviewerDashboard = () => {
     }
   };
 
-  const downloadAssessmentForm = () => {
-    // Create a simple assessment form template
-    const assessmentContent = `
-MANUSCRIPT REVIEW ASSESSMENT FORM
+  const downloadAssessmentForm = async () => {
+    try {
+      // Create a Word document using docx library
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: "MANUSCRIPT REVIEW ASSESSMENT FORM",
+              heading: HeadingLevel.HEADING_1,
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Manuscript ID: ",
+                  bold: true,
+                }),
+                new TextRun({
+                  text: "[To be filled]",
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Reviewer: ",
+                  bold: true,
+                }),
+                new TextRun({
+                  text: "[Your Name]",
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Date: ",
+                  bold: true,
+                }),
+                new TextRun({
+                  text: new Date().toLocaleDateString(),
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "1. ORIGINALITY & SIGNIFICANCE",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "☐ Highly original and significant contribution",
+            }),
+            new Paragraph({
+              text: "☐ Moderately original with clear significance",
+            }),
+            new Paragraph({
+              text: "☐ Limited originality but some significance",
+            }),
+            new Paragraph({
+              text: "☐ Lacks originality and significance",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "2. METHODOLOGY",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "☐ Methodology is sound and appropriate",
+            }),
+            new Paragraph({
+              text: "☐ Methodology is generally sound with minor issues",
+            }),
+            new Paragraph({
+              text: "☐ Methodology has significant flaws",
+            }),
+            new Paragraph({
+              text: "☐ Methodology is fundamentally flawed",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "3. CLARITY & PRESENTATION",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "☐ Very clear and well-written",
+            }),
+            new Paragraph({
+              text: "☐ Generally clear with minor improvements needed",
+            }),
+            new Paragraph({
+              text: "☐ Requires significant improvement in clarity",
+            }),
+            new Paragraph({
+              text: "☐ Poorly written and unclear",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "4. REFERENCES & CITATIONS",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "☐ Comprehensive and appropriate",
+            }),
+            new Paragraph({
+              text: "☐ Generally appropriate with minor gaps",
+            }),
+            new Paragraph({
+              text: "☐ Some important references missing",
+            }),
+            new Paragraph({
+              text: "☐ Inadequate referencing",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "5. OVERALL RECOMMENDATION",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "☐ Accept without correction",
+            }),
+            new Paragraph({
+              text: "☐ Accept subject to minor corrections",
+            }),
+            new Paragraph({
+              text: "☐ Accept subject to major corrections",
+            }),
+            new Paragraph({
+              text: "☐ Reject",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "DETAILED COMMENTS:",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "[Provide detailed feedback here]",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "CONFIDENTIAL COMMENTS TO EDITOR:",
+              heading: HeadingLevel.HEADING_2,
+            }),
+            new Paragraph({
+              text: "[Comments for editor only]",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              text: "",
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "REVIEWER SIGNATURE: ",
+                  bold: true,
+                }),
+                new TextRun({
+                  text: "________________",
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "DATE: ",
+                  bold: true,
+                }),
+                new TextRun({
+                  text: "________________",
+                }),
+              ],
+            }),
+          ],
+        }],
+      });
 
-Manuscript ID: [To be filled]
-Reviewer: [Your Name]
-Date: ${new Date().toLocaleDateString()}
+      // Generate the document as a blob
+      const blob = await Packer.toBlob(doc);
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'assessment_form_template.docx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-1. ORIGINALITY & SIGNIFICANCE
-□ Highly original and significant contribution
-□ Moderately original with clear significance
-□ Limited originality but some significance
-□ Lacks originality and significance
-
-2. METHODOLOGY
-□ Methodology is sound and appropriate
-□ Methodology is generally sound with minor issues
-□ Methodology has significant flaws
-□ Methodology is fundamentally flawed
-
-3. CLARITY & PRESENTATION
-□ Very clear and well-written
-□ Generally clear with minor improvements needed
-□ Requires significant improvement in clarity
-□ Poorly written and unclear
-
-4. REFERENCES & CITATIONS
-□ Comprehensive and appropriate
-□ Generally appropriate with minor gaps
-□ Some important references missing
-□ Inadequate referencing
-
-5. OVERALL RECOMMENDATION
-□ Accept without revision
-□ Accept with minor revisions
-□ Major revisions required
-□ Reject
-
-DETAILED COMMENTS:
-[Provide detailed feedback here]
-
-CONFIDENTIAL COMMENTS TO EDITOR:
-[Comments for editor only]
-
-REVIEWER SIGNATURE: ________________
-DATE: ________________
-    `;
-
-    const blob = new Blob([assessmentContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'assessment_form_template.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Assessment Form Downloaded",
-      description: "Fill out the form and upload it with your review.",
-    });
+      toast({
+        title: "Assessment Form Downloaded",
+        description: "Fill out the Word template and upload it with your review.",
+      });
+    } catch (error) {
+      console.error('Error creating assessment form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate assessment form template.",
+        variant: "destructive",
+      });
+    }
   };
 
   const stats = {
