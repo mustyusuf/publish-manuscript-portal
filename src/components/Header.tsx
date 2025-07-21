@@ -57,14 +57,20 @@ const Header = () => {
                   {userRole}
                 </p>
               </div>
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                Profile
+              <DropdownMenuItem asChild>
+                <a href="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </a>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
+              {userRole === 'admin' && (
+                <DropdownMenuItem asChild>
+                  <a href="/admin-settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Admin Settings
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out

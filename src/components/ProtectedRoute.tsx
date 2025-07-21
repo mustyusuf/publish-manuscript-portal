@@ -1,13 +1,15 @@
+import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requireRole?: string;
+  children: ReactNode;
+  requiredRole?: 'admin' | 'author' | 'reviewer';
+  allowedRoles?: ('admin' | 'author' | 'reviewer')[];
 }
 
-const ProtectedRoute = ({ children, requireRole }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, allowedRoles }: ProtectedRouteProps) => {
   const { user, userRole, loading } = useAuth();
 
   if (loading) {
@@ -22,8 +24,14 @@ const ProtectedRoute = ({ children, requireRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (requireRole && userRole !== requireRole) {
-    return <Navigate to="/" replace />;
+  // Check if user has required role
+  if (requiredRole && userRole !== requiredRole) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // Check if user has one of the allowed roles
+  if (allowedRoles && !allowedRoles.includes(userRole as any)) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

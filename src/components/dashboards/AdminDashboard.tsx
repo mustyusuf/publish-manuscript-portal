@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus } from 'lucide-react';
+import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings } from 'lucide-react';
+import RoleManagement from '@/components/RoleManagement';
 
 interface Manuscript {
   id: string;
@@ -221,141 +222,159 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Manuscripts</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.pending}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Under Review</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.underReview}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completed}</div>
-          </CardContent>
-        </Card>
+      <div>
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <p className="text-muted-foreground">Manage manuscripts, users, and system settings</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Manuscript Management</CardTitle>
-          <CardDescription>
-            Review and manage submitted manuscripts
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {manuscripts.map((manuscript) => (
-              <div
-                key={manuscript.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex-1">
-                  <h3 className="font-medium">{manuscript.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    by {manuscript.author.first_name} {manuscript.author.last_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Submitted: {new Date(manuscript.submission_date).toLocaleDateString()}
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(manuscript.status)}>
-                    {manuscript.status.replace('_', ' ')}
-                  </Badge>
-                  
-                  {manuscript.status === 'submitted' && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" onClick={() => setSelectedManuscript(manuscript.id)}>
-                          <UserPlus className="h-4 w-4 mr-1" />
-                          Assign Reviewer
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Assign Reviewer</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <Select onValueChange={setSelectedReviewer}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a reviewer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {reviewers.map((reviewer) => (
-                                <SelectItem key={reviewer.id} value={reviewer.id}>
-                                  {reviewer.first_name} {reviewer.last_name}
-                                  {reviewer.expertise_areas?.length > 0 && (
-                                    <span className="text-xs text-muted-foreground ml-2">
-                                      ({reviewer.expertise_areas.join(', ')})
-                                    </span>
-                                  )}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button onClick={assignReviewer} className="w-full">
-                            Assign Reviewer
+      <Tabs defaultValue="manuscripts" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manuscripts">Manuscript Management</TabsTrigger>
+          <TabsTrigger value="users">User Management</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="manuscripts" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Manuscripts</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.pending}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Under Review</CardTitle>
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.underReview}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.completed}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Manuscript Management</CardTitle>
+              <CardDescription>
+                Review and manage submitted manuscripts
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {manuscripts.map((manuscript) => (
+                  <div
+                    key={manuscript.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <h3 className="font-medium">{manuscript.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        by {manuscript.author.first_name} {manuscript.author.last_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Submitted: {new Date(manuscript.submission_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(manuscript.status)}>
+                        {manuscript.status.replace('_', ' ')}
+                      </Badge>
+                      
+                      {manuscript.status === 'submitted' && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm" onClick={() => setSelectedManuscript(manuscript.id)}>
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Assign Reviewer
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Assign Reviewer</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <Select onValueChange={setSelectedReviewer}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a reviewer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {reviewers.map((reviewer) => (
+                                    <SelectItem key={reviewer.id} value={reviewer.id}>
+                                      {reviewer.first_name} {reviewer.last_name}
+                                      {reviewer.expertise_areas?.length > 0 && (
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          ({reviewer.expertise_areas.join(', ')})
+                                        </span>
+                                      )}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button onClick={assignReviewer} className="w-full">
+                                Assign Reviewer
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      
+                      {manuscript.status === 'under_review' && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600"
+                            onClick={() => updateManuscriptStatus(manuscript.id, 'accepted')}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600"
+                            onClick={() => updateManuscriptStatus(manuscript.id, 'rejected')}
+                          >
+                            <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                  
-                  {manuscript.status === 'under_review' && (
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600"
-                        onClick={() => updateManuscriptStatus(manuscript.id, 'accepted')}
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600"
-                        onClick={() => updateManuscriptStatus(manuscript.id, 'rejected')}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="users">
+          <RoleManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
