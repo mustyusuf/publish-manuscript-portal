@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Clock, CheckCircle, Star, Eye, Upload, Download, Plus } from 'lucide-react';
+import { FileText, Clock, CheckCircle, Star, Eye, Upload, Download, Plus, FileDown } from 'lucide-react';
 
 interface ReviewAssignment {
   id: string;
@@ -54,6 +54,8 @@ const ReviewerDashboard = () => {
   const [manuscripts, setManuscripts] = useState<Manuscript[]>([]);
   const [manuscriptFile, setManuscriptFile] = useState<File | null>(null);
   const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
+  const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
+  const [reviewedManuscriptFile, setReviewedManuscriptFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [submittingManuscript, setSubmittingManuscript] = useState(false);
@@ -237,6 +239,35 @@ const ReviewerDashboard = () => {
       const recommendation = formData.get('recommendation') as string;
       const comments = formData.get('comments') as string;
 
+      let assessmentFilePath = '';
+      let reviewedManuscriptPath = '';
+
+      // Upload assessment form if provided
+      if (assessmentFile) {
+        const assessmentFileExt = assessmentFile.name.split('.').pop();
+        const assessmentFileName = `${user?.id}/assessments/${reviewId}_${Date.now()}.${assessmentFileExt}`;
+        
+        const { error: assessmentUploadError } = await supabase.storage
+          .from('manuscripts')
+          .upload(assessmentFileName, assessmentFile);
+
+        if (assessmentUploadError) throw assessmentUploadError;
+        assessmentFilePath = assessmentFileName;
+      }
+
+      // Upload reviewed manuscript if provided
+      if (reviewedManuscriptFile) {
+        const reviewedFileExt = reviewedManuscriptFile.name.split('.').pop();
+        const reviewedFileName = `${user?.id}/reviewed/${reviewId}_${Date.now()}.${reviewedFileExt}`;
+        
+        const { error: reviewedUploadError } = await supabase.storage
+          .from('manuscripts')
+          .upload(reviewedFileName, reviewedManuscriptFile);
+
+        if (reviewedUploadError) throw reviewedUploadError;
+        reviewedManuscriptPath = reviewedFileName;
+      }
+
       const { error } = await supabase
         .from('reviews')
         .update({
@@ -245,6 +276,8 @@ const ReviewerDashboard = () => {
           comments,
           status: 'completed',
           completed_date: new Date().toISOString(),
+          // Store file paths in admin_notes for now (could be separate columns)
+          ...(assessmentFilePath && { admin_notes: `Assessment: ${assessmentFilePath}${reviewedManuscriptPath ? `, Reviewed: ${reviewedManuscriptPath}` : ''}` })
         })
         .eq('id', reviewId);
 
@@ -255,6 +288,9 @@ const ReviewerDashboard = () => {
         description: "Review submitted successfully!",
       });
 
+      // Reset file inputs
+      setAssessmentFile(null);
+      setReviewedManuscriptFile(null);
       fetchAssignments();
     } catch (error) {
       console.error('Error submitting review:', error);
@@ -328,6 +364,71 @@ const ReviewerDashboard = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const downloadAssessmentForm = () => {
+    // Create a simple assessment form template
+    const assessmentContent = `
+MANUSCRIPT REVIEW ASSESSMENT FORM
+
+Manuscript ID: [To be filled]
+Reviewer: [Your Name]
+Date: ${new Date().toLocaleDateString()}
+
+1. ORIGINALITY & SIGNIFICANCE
+□ Highly original and significant contribution
+□ Moderately original with clear significance
+□ Limited originality but some significance
+□ Lacks originality and significance
+
+2. METHODOLOGY
+□ Methodology is sound and appropriate
+□ Methodology is generally sound with minor issues
+□ Methodology has significant flaws
+□ Methodology is fundamentally flawed
+
+3. CLARITY & PRESENTATION
+□ Very clear and well-written
+□ Generally clear with minor improvements needed
+□ Requires significant improvement in clarity
+□ Poorly written and unclear
+
+4. REFERENCES & CITATIONS
+□ Comprehensive and appropriate
+□ Generally appropriate with minor gaps
+□ Some important references missing
+□ Inadequate referencing
+
+5. OVERALL RECOMMENDATION
+□ Accept without revision
+□ Accept with minor revisions
+□ Major revisions required
+□ Reject
+
+DETAILED COMMENTS:
+[Provide detailed feedback here]
+
+CONFIDENTIAL COMMENTS TO EDITOR:
+[Comments for editor only]
+
+REVIEWER SIGNATURE: ________________
+DATE: ________________
+    `;
+
+    const blob = new Blob([assessmentContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'assessment_form_template.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Assessment Form Downloaded",
+      description: "Fill out the form and upload it with your review.",
+    });
   };
 
   const stats = {
@@ -468,18 +569,27 @@ const ReviewerDashboard = () => {
                               <span className="text-muted-foreground text-sm">Not rated</span>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              
-                              {assignment.status !== 'completed' ? (
+                           <TableCell>
+                             <div className="flex gap-2">
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => downloadFile(assignment.manuscript.file_path, assignment.manuscript.file_name)}
+                               >
+                                 <Eye className="h-4 w-4 mr-1" />
+                                 View
+                               </Button>
+                               
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={downloadAssessmentForm}
+                               >
+                                 <FileDown className="h-4 w-4 mr-1" />
+                                 Form
+                               </Button>
+                               
+                               {assignment.status !== 'completed' ? (
                                 <Dialog>
                                   <DialogTrigger asChild>
                                     <Button size="sm">
@@ -529,16 +639,44 @@ const ReviewerDashboard = () => {
                                         </div>
                                       </div>
                                       
-                                      <div>
-                                        <Label htmlFor="comments">Detailed Comments</Label>
-                                        <Textarea
-                                          id="comments"
-                                          name="comments"
-                                          rows={6}
-                                          placeholder="Provide detailed feedback for the author, including strengths, weaknesses, and suggestions for improvement..."
-                                          required
-                                        />
-                                      </div>
+                                       <div>
+                                         <Label htmlFor="comments">Detailed Comments</Label>
+                                         <Textarea
+                                           id="comments"
+                                           name="comments"
+                                           rows={6}
+                                           placeholder="Provide detailed feedback for the author, including strengths, weaknesses, and suggestions for improvement..."
+                                           required
+                                         />
+                                       </div>
+
+                                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                         <div>
+                                           <Label htmlFor="assessmentFile">Upload Assessment Form (Optional)</Label>
+                                           <Input
+                                             id="assessmentFile"
+                                             type="file"
+                                             accept=".pdf,.doc,.docx,.txt"
+                                             onChange={(e) => setAssessmentFile(e.target.files?.[0] || null)}
+                                           />
+                                           <p className="text-sm text-muted-foreground mt-1">
+                                             Upload your completed assessment form
+                                           </p>
+                                         </div>
+                                         
+                                         <div>
+                                           <Label htmlFor="reviewedManuscript">Upload Reviewed Manuscript (Optional)</Label>
+                                           <Input
+                                             id="reviewedManuscript"
+                                             type="file"
+                                             accept=".pdf,.doc,.docx"
+                                             onChange={(e) => setReviewedManuscriptFile(e.target.files?.[0] || null)}
+                                           />
+                                           <p className="text-sm text-muted-foreground mt-1">
+                                             Upload manuscript with your annotations/comments
+                                           </p>
+                                         </div>
+                                       </div>
                                       
                                       <div className="bg-muted p-3 rounded-lg">
                                         <h4 className="font-medium mb-2">Manuscript Details:</h4>
