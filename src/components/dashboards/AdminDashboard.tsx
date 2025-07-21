@@ -66,7 +66,6 @@ const AdminDashboard = () => {
   const [editingManuscript, setEditingManuscript] = useState<Manuscript | null>(null);
   const [editFormData, setEditFormData] = useState({
     title: '',
-    abstract: '',
     keywords: [] as string[],
     co_authors: [] as string[],
     admin_notes: ''
@@ -387,7 +386,6 @@ const AdminDashboard = () => {
     setEditingManuscript(manuscript);
     setEditFormData({
       title: manuscript.title,
-      abstract: manuscript.abstract,
       keywords: manuscript.keywords || [],
       co_authors: manuscript.co_authors || [],
       admin_notes: manuscript.admin_notes || ''
@@ -402,7 +400,6 @@ const AdminDashboard = () => {
         .from('manuscripts')
         .update({
           title: editFormData.title,
-          abstract: editFormData.abstract,
           keywords: editFormData.keywords,
           co_authors: editFormData.co_authors,
           admin_notes: editFormData.admin_notes,
@@ -984,16 +981,6 @@ const AdminDashboard = () => {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="edit-abstract">Abstract</Label>
-                    <Textarea
-                      id="edit-abstract"
-                      value={editFormData.abstract}
-                      onChange={(e) => setEditFormData({...editFormData, abstract: e.target.value})}
-                      rows={6}
-                      className="mt-1"
-                    />
-                  </div>
 
                   <div>
                     <Label htmlFor="edit-keywords">Keywords (comma-separated)</Label>
