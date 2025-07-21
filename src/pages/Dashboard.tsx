@@ -11,9 +11,7 @@ const Dashboard = () => {
     switch (userRole) {
       case 'admin':
         return <AdminDashboard />;
-      case 'editor':
       case 'reviewer':
-        // Both editor and reviewer roles use the reviewer dashboard
         return <ReviewerDashboard />;
       case 'author':
       default:

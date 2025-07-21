@@ -19,7 +19,7 @@ interface UserProfile {
 
 interface UserRole {
   user_id: string;
-  role: 'admin' | 'author' | 'reviewer' | 'editor';
+  role: 'admin' | 'author' | 'reviewer';
 }
 
 const UserManagement = () => {
@@ -50,7 +50,12 @@ const UserManagement = () => {
       if (rolesError) throw rolesError;
 
       setUsers(profilesData || []);
-      setUserRoles(rolesData || []);
+      // Filter out any legacy editor roles and convert them to reviewer
+      const filteredRoles = (rolesData || []).map(role => ({
+        ...role,
+        role: role.role === 'editor' ? 'reviewer' as const : role.role as 'admin' | 'author' | 'reviewer'
+      })).filter(role => ['admin', 'author', 'reviewer'].includes(role.role));
+      setUserRoles(filteredRoles);
     } catch (error) {
       console.error('Error fetching users and roles:', error);
       toast({
@@ -68,7 +73,7 @@ const UserManagement = () => {
     return userRole?.role || 'author'; // Default to author if no role found
   };
 
-  const updateUserRole = async (userId: string, newRole: 'admin' | 'author' | 'reviewer' | 'editor') => {
+  const updateUserRole = async (userId: string, newRole: 'admin' | 'author' | 'reviewer') => {
     setUpdatingRoles(prev => new Set(prev).add(userId));
     
     try {
@@ -121,8 +126,6 @@ const UserManagement = () => {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-      case 'editor':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       case 'reviewer':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'author':
@@ -136,14 +139,12 @@ const UserManagement = () => {
     switch (role) {
       case 'admin':
         return 'Full system access and user management';
-      case 'editor':
-        return 'Can submit manuscripts and review assigned papers';
       case 'reviewer':
-        return 'Can review assigned manuscripts';
+        return 'Can review assigned manuscripts and submit their own';
       case 'author':
         return 'Can submit manuscripts for review';
       default:
-        return 'Standard user access';
+        return 'No role assigned';
     }
   };
 
@@ -167,7 +168,7 @@ const UserManagement = () => {
             User Management
           </CardTitle>
           <CardDescription>
-            Manage user roles and permissions. Editors can both submit manuscripts and review assigned papers.
+            Manage user roles and permissions. Reviewers can both submit manuscripts and review assigned papers.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -215,7 +216,7 @@ const UserManagement = () => {
                           <div className="flex items-center gap-2">
                             <Select
                               value={currentRole}
-                              onValueChange={(newRole: 'admin' | 'author' | 'reviewer' | 'editor') => 
+                              onValueChange={(newRole: 'admin' | 'author' | 'reviewer') => 
                                 updateUserRole(user.user_id, newRole)
                               }
                               disabled={isUpdating}
@@ -225,7 +226,6 @@ const UserManagement = () => {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="editor">Editor</SelectItem>
                                 <SelectItem value="reviewer">Reviewer</SelectItem>
                                 <SelectItem value="author">Author</SelectItem>
                               </SelectContent>
@@ -276,20 +276,6 @@ const UserManagement = () => {
               </ul>
             </div>
             
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                  <Edit className="w-3 h-3 mr-1" />
-                  Editor
-                </Badge>
-              </div>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Submit manuscripts</li>
-                <li>• Review assigned papers</li>
-                <li>• Access to both dashboards</li>
-                <li>• Dual privileges</li>
-              </ul>
-            </div>
             
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 mb-2">
@@ -300,9 +286,9 @@ const UserManagement = () => {
               </div>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Review assigned manuscripts</li>
+                <li>• Submit their own manuscripts</li>
                 <li>• Provide ratings and feedback</li>
                 <li>• Access reviewer dashboard</li>
-                <li>• Cannot submit papers</li>
               </ul>
             </div>
             

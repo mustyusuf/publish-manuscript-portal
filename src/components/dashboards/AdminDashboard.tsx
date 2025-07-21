@@ -96,11 +96,11 @@ const AdminDashboard = () => {
 
       if (authorsError) throw authorsError;
 
-      // Fetch reviewers (including editors who can also review)
+      // Fetch reviewers
       const { data: reviewerRoles, error: reviewerRolesError } = await supabase
         .from('user_roles')
         .select('user_id')
-        .in('role', ['reviewer', 'editor']);
+        .eq('role', 'reviewer');
 
       if (reviewerRolesError) throw reviewerRolesError;
 
