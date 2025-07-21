@@ -85,14 +85,13 @@ const AuthorDashboard = () => {
 
   const handleSubmitManuscript = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user || !manuscriptFile) return;
+    if (!user || !manuscriptFile || !coverLetterFile) return;
 
     setSubmitting(true);
     
     try {
       const formData = new FormData(e.currentTarget);
       const title = formData.get('title') as string;
-      const abstract = formData.get('abstract') as string;
 
       // Upload manuscript file
       const manuscriptFileExt = manuscriptFile.name.split('.').pop();
@@ -104,25 +103,22 @@ const AuthorDashboard = () => {
 
       if (manuscriptUploadError) throw manuscriptUploadError;
 
-      // Upload cover letter if provided
-      let coverLetterFileName = null;
-      if (coverLetterFile) {
-        const coverLetterFileExt = coverLetterFile.name.split('.').pop();
-        coverLetterFileName = `${user.id}/cover-letters/${Date.now()}.${coverLetterFileExt}`;
-        
-        const { error: coverLetterUploadError } = await supabase.storage
-          .from('manuscripts')
-          .upload(coverLetterFileName, coverLetterFile);
+      // Upload cover letter - now required
+      const coverLetterFileExt = coverLetterFile.name.split('.').pop();
+      const coverLetterFileName = `${user.id}/cover-letters/${Date.now()}.${coverLetterFileExt}`;
+      
+      const { error: coverLetterUploadError } = await supabase.storage
+        .from('manuscripts')
+        .upload(coverLetterFileName, coverLetterFile);
 
-        if (coverLetterUploadError) throw coverLetterUploadError;
-      }
+      if (coverLetterUploadError) throw coverLetterUploadError;
 
-      // Create manuscript record
+      // Create manuscript record with auto-generated unique ID
       const { error: insertError } = await supabase
         .from('manuscripts')
         .insert({
           title,
-          abstract,
+          abstract: '', // Set empty abstract since it's not required
           author_id: user.id,
           file_path: manuscriptFileName,
           file_name: manuscriptFile.name,
@@ -281,20 +277,23 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Submit New Manuscript</DialogTitle>
+              <DialogDescription>
+                Upload your manuscript and cover letter for review. A unique ID will be automatically generated for your submission.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmitManuscript} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" name="title" required />
+              <div className="space-y-2">
+                <Label htmlFor="title">Manuscript Title *</Label>
+                <Input 
+                  id="title" 
+                  name="title" 
+                  placeholder="Enter the title of your manuscript"
+                  required 
+                />
               </div>
               
-              <div>
-                <Label htmlFor="abstract">Abstract</Label>
-                <Textarea id="abstract" name="abstract" rows={4} required />
-              </div>
-              
-              <div>
-                <Label htmlFor="manuscriptFile">Upload Manuscript</Label>
+              <div className="space-y-2">
+                <Label htmlFor="manuscriptFile">Upload Manuscript *</Label>
                 <Input
                   id="manuscriptFile"
                   type="file"
@@ -302,19 +301,26 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                   onChange={(e) => setManuscriptFile(e.target.files?.[0] || null)}
                   required
                 />
+                <p className="text-sm text-muted-foreground">
+                  Accepted formats: PDF, DOC, DOCX
+                </p>
               </div>
               
-              <div>
-                <Label htmlFor="coverLetterFile">Upload Cover Letter (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="coverLetterFile">Upload Cover Letter *</Label>
                 <Input
                   id="coverLetterFile"
                   type="file"
                   accept=".pdf,.doc,.docx"
                   onChange={(e) => setCoverLetterFile(e.target.files?.[0] || null)}
+                  required
                 />
+                <p className="text-sm text-muted-foreground">
+                  Accepted formats: PDF, DOC, DOCX
+                </p>
               </div>
               
-              <Button type="submit" className="w-full" disabled={submitting || !manuscriptFile}>
+              <Button type="submit" className="w-full" disabled={submitting || !manuscriptFile || !coverLetterFile}>
                 {submitting ? (
                   <>
                     <Upload className="mr-2 h-4 w-4 animate-spin" />
