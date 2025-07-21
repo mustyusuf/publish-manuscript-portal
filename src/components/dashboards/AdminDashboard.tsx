@@ -15,10 +15,18 @@ import FileUpload from '@/components/FileUpload';
 interface Manuscript {
   id: string;
   title: string;
+  abstract: string;
   status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected' | 'internal_review' | 'external_review' | 'accept_without_correction' | 'accept_minor_corrections' | 'accept_major_corrections' | 'published' | 'reject';
   submission_date: string;
   file_path?: string;
   file_name?: string;
+  file_size?: number;
+  cover_letter_path?: string;
+  cover_letter_name?: string;
+  cover_letter_size?: number;
+  keywords?: string[];
+  co_authors?: string[];
+  admin_notes?: string;
   author: {
     first_name: string;
     last_name: string;
@@ -48,6 +56,7 @@ const AdminDashboard = () => {
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
   const [reviewDocuments, setReviewDocuments] = useState<{[key: string]: any[]}>({});
   const [finalDocuments, setFinalDocuments] = useState<any[]>([]);
+  const [viewingManuscript, setViewingManuscript] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -60,7 +69,7 @@ const AdminDashboard = () => {
       // Fetch manuscripts
       const { data: manuscriptsData, error: manuscriptsError } = await supabase
         .from('manuscripts')
-        .select('id, title, status, submission_date, author_id, file_path, file_name')
+        .select('id, title, abstract, status, submission_date, author_id, file_path, file_name, file_size, cover_letter_path, cover_letter_name, cover_letter_size, keywords, co_authors, admin_notes')
         .order('submission_date', { ascending: false });
 
       if (manuscriptsError) throw manuscriptsError;
@@ -96,10 +105,18 @@ const AdminDashboard = () => {
         return {
           id: m.id,
           title: m.title,
+          abstract: m.abstract,
           status: m.status,
           submission_date: m.submission_date,
           file_path: m.file_path,
           file_name: m.file_name,
+          file_size: m.file_size,
+          cover_letter_path: m.cover_letter_path,
+          cover_letter_name: m.cover_letter_name,
+          cover_letter_size: m.cover_letter_size,
+          keywords: m.keywords,
+          co_authors: m.co_authors,
+          admin_notes: m.admin_notes,
           author: {
             first_name: author?.first_name || '',
             last_name: author?.last_name || '',
@@ -253,6 +270,47 @@ const AdminDashboard = () => {
     }
   };
 
+  const downloadCoverLetter = async (manuscript: Manuscript) => {
+    if (!manuscript.cover_letter_path) {
+      toast({
+        title: "Error",
+        description: "No cover letter available for download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('manuscripts')
+        .download(manuscript.cover_letter_path);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = manuscript.cover_letter_name || 'cover-letter.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Cover letter downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download cover letter.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleReviewDocumentsUpload = (manuscriptId: string, files: any[]) => {
     setReviewDocuments(prev => ({
       ...prev,
@@ -399,6 +457,15 @@ const AdminDashboard = () => {
                       <Badge className={getStatusColor(manuscript.status)}>
                         {manuscript.status.replace('_', ' ')}
                       </Badge>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setViewingManuscript(manuscript)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
                       
                       {manuscript.file_path && (
                         <Button
@@ -575,6 +642,138 @@ const AdminDashboard = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Manuscript Details Dialog */}
+          <Dialog open={!!viewingManuscript} onOpenChange={() => setViewingManuscript(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Manuscript Details</DialogTitle>
+              </DialogHeader>
+              {viewingManuscript && (
+                <div className="space-y-6">
+                  {/* Title and Basic Info */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">{viewingManuscript.title}</h3>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span>Status: <Badge className={getStatusColor(viewingManuscript.status)}>{viewingManuscript.status.replace('_', ' ')}</Badge></span>
+                        <span>Submitted: {new Date(viewingManuscript.submission_date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium mb-2">Author Information</h4>
+                      <div className="bg-muted/50 p-3 rounded-lg">
+                        <p><strong>Name:</strong> {viewingManuscript.author.first_name} {viewingManuscript.author.last_name}</p>
+                        <p><strong>Email:</strong> {viewingManuscript.author.email}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Abstract */}
+                  <div>
+                    <h4 className="font-medium mb-2">Abstract</h4>
+                    <div className="bg-muted/50 p-4 rounded-lg">
+                      <p className="text-sm leading-relaxed">{viewingManuscript.abstract}</p>
+                    </div>
+                  </div>
+
+                  {/* Keywords */}
+                  {viewingManuscript.keywords && viewingManuscript.keywords.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Keywords</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {viewingManuscript.keywords.map((keyword, index) => (
+                          <Badge key={index} variant="secondary">{keyword}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Co-authors */}
+                  {viewingManuscript.co_authors && viewingManuscript.co_authors.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Co-authors</h4>
+                      <div className="bg-muted/50 p-3 rounded-lg">
+                        <ul className="space-y-1">
+                          {viewingManuscript.co_authors.map((author, index) => (
+                            <li key={index} className="text-sm">{author}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Files */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Manuscript File */}
+                    {viewingManuscript.file_path && (
+                      <div>
+                        <h4 className="font-medium mb-2">Manuscript File</h4>
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-sm">{viewingManuscript.file_name}</p>
+                              {viewingManuscript.file_size && (
+                                <p className="text-xs text-muted-foreground">
+                                  {(viewingManuscript.file_size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadManuscript(viewingManuscript)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cover Letter */}
+                    {viewingManuscript.cover_letter_path && (
+                      <div>
+                        <h4 className="font-medium mb-2">Cover Letter</h4>
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-sm">{viewingManuscript.cover_letter_name}</p>
+                              {viewingManuscript.cover_letter_size && (
+                                <p className="text-xs text-muted-foreground">
+                                  {(viewingManuscript.cover_letter_size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadCoverLetter(viewingManuscript)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Admin Notes */}
+                  {viewingManuscript.admin_notes && (
+                    <div>
+                      <h4 className="font-medium mb-2">Admin Notes</h4>
+                      <div className="bg-muted/50 p-4 rounded-lg">
+                        <p className="text-sm leading-relaxed">{viewingManuscript.admin_notes}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="users">
