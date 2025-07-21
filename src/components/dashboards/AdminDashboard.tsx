@@ -8,10 +8,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send, Trash2 } from 'lucide-react';
+import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send, Trash2, MoreVertical, Edit } from 'lucide-react';
 import UserManagement from '@/components/UserManagement';
 import UserProfile from '@/components/UserProfile';
 import FileUpload from '@/components/FileUpload';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface Manuscript {
   id: string;
@@ -59,6 +63,14 @@ const AdminDashboard = () => {
   const [finalDocuments, setFinalDocuments] = useState<{[key: string]: any[]}>({});
   const [viewingManuscript, setViewingManuscript] = useState<Manuscript | null>(null);
   const [selectedFinalManuscript, setSelectedFinalManuscript] = useState<string>('');
+  const [editingManuscript, setEditingManuscript] = useState<Manuscript | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    abstract: '',
+    keywords: [] as string[],
+    co_authors: [] as string[],
+    admin_notes: ''
+  });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -371,6 +383,52 @@ const AdminDashboard = () => {
     }
   };
 
+  const openEditManuscript = (manuscript: Manuscript) => {
+    setEditingManuscript(manuscript);
+    setEditFormData({
+      title: manuscript.title,
+      abstract: manuscript.abstract,
+      keywords: manuscript.keywords || [],
+      co_authors: manuscript.co_authors || [],
+      admin_notes: manuscript.admin_notes || ''
+    });
+  };
+
+  const updateManuscript = async () => {
+    if (!editingManuscript) return;
+
+    try {
+      const { error } = await supabase
+        .from('manuscripts')
+        .update({
+          title: editFormData.title,
+          abstract: editFormData.abstract,
+          keywords: editFormData.keywords,
+          co_authors: editFormData.co_authors,
+          admin_notes: editFormData.admin_notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingManuscript.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Manuscript updated successfully.",
+      });
+
+      setEditingManuscript(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error updating manuscript:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update manuscript.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const sendDocumentsToAuthor = async (manuscriptId: string) => {
     const documents = reviewDocuments[manuscriptId];
     if (!documents || documents.length === 0) {
@@ -516,32 +574,6 @@ const AdminDashboard = () => {
                         View Details
                       </Button>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="sm" variant="destructive">
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Manuscript</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{manuscript.title}"? This action cannot be undone and will permanently remove all associated data.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => deleteManuscript(manuscript.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete Manuscript
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      
                       {manuscript.file_path && (
                         <Button
                           size="sm"
@@ -552,7 +584,7 @@ const AdminDashboard = () => {
                           Download
                         </Button>
                       )}
-                      
+
                       {manuscript.status === 'submitted' && (
                         <Dialog>
                           <DialogTrigger asChild>
@@ -656,26 +688,53 @@ const AdminDashboard = () => {
                          </Button>
                        )}
                        
-                       <Select
-                         onValueChange={(value) => updateManuscriptStatus(manuscript.id, value as any)}
-                         defaultValue={manuscript.status}
-                       >
-                         <SelectTrigger className="w-48">
-                           <SelectValue />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="submitted">Submitted</SelectItem>
-                           <SelectItem value="under_review">Under Review</SelectItem>
-                           <SelectItem value="internal_review">Internal Review</SelectItem>
-                           <SelectItem value="external_review">External Review</SelectItem>
-                           <SelectItem value="revision_requested">Revision Requested</SelectItem>
-                          <SelectItem value="accept_without_correction">Accept without correction</SelectItem>
-                          <SelectItem value="accept_minor_corrections">Accept subject to minor corrections</SelectItem>
-                          <SelectItem value="accept_major_corrections">Accept subject to major corrections</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="reject">Reject</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Select
+                          onValueChange={(value) => updateManuscriptStatus(manuscript.id, value as any)}
+                          defaultValue={manuscript.status}
+                        >
+                          <SelectTrigger className="w-48">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="submitted">Submitted</SelectItem>
+                            <SelectItem value="under_review">Under Review</SelectItem>
+                            <SelectItem value="internal_review">Internal Review</SelectItem>
+                            <SelectItem value="external_review">External Review</SelectItem>
+                            <SelectItem value="revision_requested">Revision Requested</SelectItem>
+                           <SelectItem value="accept_without_correction">Accept without correction</SelectItem>
+                           <SelectItem value="accept_minor_corrections">Accept subject to minor corrections</SelectItem>
+                           <SelectItem value="accept_major_corrections">Accept subject to major corrections</SelectItem>
+                           <SelectItem value="published">Published</SelectItem>
+                           <SelectItem value="reject">Reject</SelectItem>
+                         </SelectContent>
+                       </Select>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditManuscript(manuscript)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Manuscript
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => {
+                                // We'll use a simple confirm dialog for now
+                                if (window.confirm(`Are you sure you want to delete "${manuscript.title}"? This action cannot be undone.`)) {
+                                  deleteManuscript(manuscript.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Manuscript
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                   </div>
                 ))}
@@ -899,6 +958,91 @@ const AdminDashboard = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Manuscript Dialog */}
+          <Dialog open={!!editingManuscript} onOpenChange={() => setEditingManuscript(null)}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Manuscript</DialogTitle>
+                <DialogDescription>
+                  Update manuscript information and admin notes
+                </DialogDescription>
+              </DialogHeader>
+              {editingManuscript && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-title">Title</Label>
+                    <Input
+                      id="edit-title"
+                      value={editFormData.title}
+                      onChange={(e) => setEditFormData({...editFormData, title: e.target.value})}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-abstract">Abstract</Label>
+                    <Textarea
+                      id="edit-abstract"
+                      value={editFormData.abstract}
+                      onChange={(e) => setEditFormData({...editFormData, abstract: e.target.value})}
+                      rows={6}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-keywords">Keywords (comma-separated)</Label>
+                    <Input
+                      id="edit-keywords"
+                      value={editFormData.keywords.join(', ')}
+                      onChange={(e) => setEditFormData({
+                        ...editFormData, 
+                        keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k)
+                      })}
+                      className="mt-1"
+                      placeholder="keyword1, keyword2, keyword3"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-coauthors">Co-authors (comma-separated)</Label>
+                    <Input
+                      id="edit-coauthors"
+                      value={editFormData.co_authors.join(', ')}
+                      onChange={(e) => setEditFormData({
+                        ...editFormData, 
+                        co_authors: e.target.value.split(',').map(a => a.trim()).filter(a => a)
+                      })}
+                      className="mt-1"
+                      placeholder="Author Name 1, Author Name 2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-admin-notes">Admin Notes</Label>
+                    <Textarea
+                      id="edit-admin-notes"
+                      value={editFormData.admin_notes}
+                      onChange={(e) => setEditFormData({...editFormData, admin_notes: e.target.value})}
+                      rows={4}
+                      className="mt-1"
+                      placeholder="Internal notes for admin use..."
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingManuscript(null)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={updateManuscript}>
+                      Update Manuscript
+                    </Button>
+                  </DialogFooter>
                 </div>
               )}
             </DialogContent>
