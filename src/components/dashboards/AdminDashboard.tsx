@@ -80,13 +80,21 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
+      console.log('Starting fetchData...');
+      setLoading(true);
+      
       // Fetch manuscripts
+      console.log('Fetching manuscripts...');
       const { data: manuscriptsData, error: manuscriptsError } = await supabase
         .from('manuscripts')
         .select('id, title, abstract, status, submission_date, author_id, file_path, file_name, file_size, cover_letter_path, cover_letter_name, cover_letter_size, keywords, co_authors, admin_notes')
         .order('submission_date', { ascending: false });
 
-      if (manuscriptsError) throw manuscriptsError;
+      if (manuscriptsError) {
+        console.error('Manuscripts error:', manuscriptsError);
+        throw manuscriptsError;
+      }
+      console.log('Manuscripts data:', manuscriptsData);
 
       // Fetch authors for manuscripts
       const authorIds = manuscriptsData?.map(m => m.author_id) || [];
