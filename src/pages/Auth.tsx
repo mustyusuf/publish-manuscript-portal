@@ -47,8 +47,15 @@ const Auth = () => {
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
     const firstName = formData.get('firstName') as string;
     const lastName = formData.get('lastName') as string;
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signUp(email, password, firstName, lastName);
     
@@ -159,6 +166,17 @@ const Auth = () => {
                     name="password"
                     type="password"
                     placeholder="Create a password"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
                     required
                     minLength={6}
                   />

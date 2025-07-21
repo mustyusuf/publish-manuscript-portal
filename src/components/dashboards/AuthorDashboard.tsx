@@ -33,7 +33,8 @@ interface Review {
 const AuthorDashboard = () => {
   const { user } = useAuth();
   const [manuscripts, setManuscripts] = useState<Manuscript[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedManuscriptFile, setSelectedManuscriptFile] = useState<File | null>(null);
+  const [selectedCoverLetterFile, setSelectedCoverLetterFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
@@ -68,7 +69,7 @@ const AuthorDashboard = () => {
 
   const handleSubmitManuscript = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!user || !selectedFile) return;
+    if (!user || !selectedManuscriptFile) return;
 
     setSubmitting(true);
     
@@ -76,18 +77,29 @@ const AuthorDashboard = () => {
       const formData = new FormData(e.currentTarget);
       const title = formData.get('title') as string;
       const abstract = formData.get('abstract') as string;
-      const keywords = (formData.get('keywords') as string).split(',').map(k => k.trim());
-      const coAuthors = (formData.get('coAuthors') as string).split(',').map(a => a.trim()).filter(a => a);
 
-      // Upload file
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Upload manuscript file
+      const manuscriptFileExt = selectedManuscriptFile.name.split('.').pop();
+      const manuscriptFileName = `${user.id}/manuscripts/${Date.now()}.${manuscriptFileExt}`;
       
-      const { error: uploadError } = await supabase.storage
+      const { error: manuscriptUploadError } = await supabase.storage
         .from('manuscripts')
-        .upload(fileName, selectedFile);
+        .upload(manuscriptFileName, selectedManuscriptFile);
 
-      if (uploadError) throw uploadError;
+      if (manuscriptUploadError) throw manuscriptUploadError;
+
+      // Upload cover letter if provided
+      let coverLetterFileName = null;
+      if (selectedCoverLetterFile) {
+        const coverLetterFileExt = selectedCoverLetterFile.name.split('.').pop();
+        coverLetterFileName = `${user.id}/cover-letters/${Date.now()}.${coverLetterFileExt}`;
+        
+        const { error: coverLetterUploadError } = await supabase.storage
+          .from('manuscripts')
+          .upload(coverLetterFileName, selectedCoverLetterFile);
+
+        if (coverLetterUploadError) throw coverLetterUploadError;
+      }
 
       // Create manuscript record
       const { error: insertError } = await supabase
@@ -95,12 +107,10 @@ const AuthorDashboard = () => {
         .insert({
           title,
           abstract,
-          keywords,
-          co_authors: coAuthors,
           author_id: user.id,
-          file_path: fileName,
-          file_name: selectedFile.name,
-          file_size: selectedFile.size,
+          file_path: manuscriptFileName,
+          file_name: selectedManuscriptFile.name,
+          file_size: selectedManuscriptFile.size,
         });
 
       if (insertError) throw insertError;
@@ -110,7 +120,8 @@ const AuthorDashboard = () => {
         description: "Manuscript submitted successfully!",
       });
 
-      setSelectedFile(null);
+      setSelectedManuscriptFile(null);
+      setSelectedCoverLetterFile(null);
       fetchManuscripts();
       
       // Reset form
@@ -205,27 +216,27 @@ const AuthorDashboard = () => {
               </div>
               
               <div>
-                <Label htmlFor="keywords">Keywords (comma-separated)</Label>
-                <Input id="keywords" name="keywords" placeholder="keyword1, keyword2, keyword3" />
-              </div>
-              
-              <div>
-                <Label htmlFor="coAuthors">Co-authors (comma-separated)</Label>
-                <Input id="coAuthors" name="coAuthors" placeholder="Author 1, Author 2" />
-              </div>
-              
-              <div>
-                <Label htmlFor="file">Manuscript File</Label>
+                <Label htmlFor="manuscriptFile">Upload Manuscript</Label>
                 <Input
-                  id="file"
+                  id="manuscriptFile"
                   type="file"
                   accept=".pdf,.doc,.docx"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  onChange={(e) => setSelectedManuscriptFile(e.target.files?.[0] || null)}
                   required
                 />
               </div>
               
-              <Button type="submit" className="w-full" disabled={submitting || !selectedFile}>
+              <div>
+                <Label htmlFor="coverLetterFile">Upload Cover Letter (Optional)</Label>
+                <Input
+                  id="coverLetterFile"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => setSelectedCoverLetterFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={submitting || !selectedManuscriptFile}>
                 {submitting ? (
                   <>
                     <Upload className="mr-2 h-4 w-4 animate-spin" />
@@ -270,27 +281,27 @@ const AuthorDashboard = () => {
                     </div>
                     
                     <div>
-                      <Label htmlFor="keywords">Keywords (comma-separated)</Label>
-                      <Input id="keywords" name="keywords" placeholder="keyword1, keyword2, keyword3" />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="coAuthors">Co-authors (comma-separated)</Label>
-                      <Input id="coAuthors" name="coAuthors" placeholder="Author 1, Author 2" />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="file">Manuscript File</Label>
+                      <Label htmlFor="manuscriptFile">Upload Manuscript</Label>
                       <Input
-                        id="file"
+                        id="manuscriptFile"
                         type="file"
                         accept=".pdf,.doc,.docx"
-                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                        onChange={(e) => setSelectedManuscriptFile(e.target.files?.[0] || null)}
                         required
                       />
                     </div>
                     
-                    <Button type="submit" className="w-full" disabled={submitting || !selectedFile}>
+                    <div>
+                      <Label htmlFor="coverLetterFile">Upload Cover Letter (Optional)</Label>
+                      <Input
+                        id="coverLetterFile"
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => setSelectedCoverLetterFile(e.target.files?.[0] || null)}
+                      />
+                    </div>
+                    
+                    <Button type="submit" className="w-full" disabled={submitting || !selectedManuscriptFile}>
                       {submitting ? (
                         <>
                           <Upload className="mr-2 h-4 w-4 animate-spin" />
