@@ -45,24 +45,20 @@ const AuthorDashboard = () => {
   const [manuscriptReviews, setManuscriptReviews] = useState<Review[]>([]);
 
   useEffect(() => {
-    console.log('AuthorDashboard mounted, user:', user);
     if (user?.id) {
       fetchManuscripts();
     } else {
-      console.log('No user available, skipping manuscript fetch');
       setLoading(false);
     }
   }, [user?.id]);
 
   const fetchManuscripts = async () => {
     if (!user?.id) {
-      console.log('No user ID available for fetching manuscripts');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('Fetching manuscripts for user:', user.id);
       const { data, error } = await supabase
         .from('manuscripts')
         .select('*')
@@ -74,7 +70,6 @@ const AuthorDashboard = () => {
         throw error;
       }
 
-      console.log('Manuscripts fetched successfully:', data);
       setManuscripts(data || []);
     } catch (error) {
       console.error('Error fetching manuscripts:', error);
@@ -342,26 +337,28 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {manuscripts.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No manuscripts submitted yet. Click "Submit New Manuscript" to get started.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>S/N</TableHead>
+                  <TableHead>File ID</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>View</TableHead>
+                  <TableHead>Reviewer</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {manuscripts.length === 0 ? (
                   <TableRow>
-                    <TableHead>S/N</TableHead>
-                    <TableHead>File ID</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>View</TableHead>
-                    <TableHead>Reviewer</TableHead>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No manuscripts submitted yet. Click "Submit New Manuscript" to get started.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {manuscripts.map((manuscript, index) => (
+                ) : (
+                  manuscripts.map((manuscript, index) => (
                     <TableRow key={manuscript.id}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell className="font-mono text-xs">
@@ -399,11 +396,11 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
