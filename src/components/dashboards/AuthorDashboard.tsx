@@ -45,26 +45,42 @@ const AuthorDashboard = () => {
   const [manuscriptReviews, setManuscriptReviews] = useState<Review[]>([]);
 
   useEffect(() => {
-    if (user) {
+    console.log('AuthorDashboard mounted, user:', user);
+    if (user?.id) {
       fetchManuscripts();
+    } else {
+      console.log('No user available, skipping manuscript fetch');
+      setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchManuscripts = async () => {
+    if (!user?.id) {
+      console.log('No user ID available for fetching manuscripts');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching manuscripts for user:', user.id);
       const { data, error } = await supabase
         .from('manuscripts')
         .select('*')
-        .eq('author_id', user?.id)
+        .eq('author_id', user.id)
         .order('submission_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching manuscripts:', error);
+        throw error;
+      }
+
+      console.log('Manuscripts fetched successfully:', data);
       setManuscripts(data || []);
     } catch (error) {
       console.error('Error fetching manuscripts:', error);
       toast({
         title: "Error",
-        description: "Failed to load manuscripts.",
+        description: "Failed to load manuscripts. Please try refreshing the page.",
         variant: "destructive",
       });
     } finally {
