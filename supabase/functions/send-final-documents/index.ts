@@ -37,22 +37,33 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: manuscript, error: manuscriptError } = await supabase
       .from('manuscripts')
       .select(`
-        *,
-        profiles!manuscripts_author_id_fkey (
-          first_name,
-          last_name,
-          email
-        )
+        id,
+        title,
+        author_id,
+        status
       `)
       .eq('id', manuscriptId)
       .single();
 
     if (manuscriptError || !manuscript) {
+      console.error('Manuscript query error:', manuscriptError);
       throw new Error('Manuscript not found');
     }
 
-    const authorEmail = manuscript.profiles.email;
-    const authorName = `${manuscript.profiles.first_name} ${manuscript.profiles.last_name}`;
+    // Get author profile separately
+    const { data: authorProfile, error: authorError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('user_id', manuscript.author_id)
+      .single();
+
+    if (authorError || !authorProfile) {
+      console.error('Author profile query error:', authorError);
+      throw new Error('Author profile not found');
+    }
+
+    const authorEmail = authorProfile.email;
+    const authorName = `${authorProfile.first_name} ${authorProfile.last_name}`;
 
     // Create document links for email
     const documentLinks = documents.map(doc => 

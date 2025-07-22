@@ -202,8 +202,26 @@ const AdminDashboard = () => {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // 2 weeks from now
 
-      // Insert multiple review assignments
-      const reviewInserts = selectedReviewers.map(reviewerId => ({
+      // Check for existing assignments to prevent duplicates
+      const { data: existingReviews } = await supabase
+        .from('reviews')
+        .select('reviewer_id')
+        .eq('manuscript_id', selectedManuscript);
+
+      const existingReviewerIds = existingReviews?.map(r => r.reviewer_id) || [];
+      const newReviewers = selectedReviewers.filter(id => !existingReviewerIds.includes(id));
+
+      if (newReviewers.length === 0) {
+        toast({
+          title: "Warning",
+          description: "All selected reviewers are already assigned to this manuscript.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Insert only new review assignments
+      const reviewInserts = newReviewers.map(reviewerId => ({
         manuscript_id: selectedManuscript,
         reviewer_id: reviewerId,
         due_date: dueDate.toISOString(),
@@ -223,7 +241,7 @@ const AdminDashboard = () => {
 
       toast({
         title: "Success",
-        description: `${selectedReviewers.length} reviewer(s) assigned successfully.`,
+        description: `${newReviewers.length} reviewer(s) assigned successfully.`,
       });
 
       setSelectedManuscript('');
