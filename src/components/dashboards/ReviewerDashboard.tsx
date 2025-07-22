@@ -374,197 +374,275 @@ const ReviewerDashboard = () => {
           properties: {},
           children: [
             new Paragraph({
-              text: "MANUSCRIPT REVIEW ASSESSMENT FORM",
+              text: "ANNALS OF IBADAN POSTGRADUATE MEDICINE (AIPM)",
               heading: HeadingLevel.HEADING_1,
               alignment: AlignmentType.CENTER,
             }),
             new Paragraph({
-              text: "",
+              text: "A PubMed indexed biomedical journal",
+              alignment: AlignmentType.CENTER,
             }),
+            new Paragraph({
+              text: "INTERNAL REVIEWER'S ASSESSMENT FORM FOR SUBMITTED MANUSCRIPTS",
+              heading: HeadingLevel.HEADING_2,
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({ text: "" }),
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "Manuscript ID: ",
+                  text: "TITLE OF ARTICLE: ",
                   bold: true,
                 }),
                 new TextRun({
-                  text: "[To be filled]",
+                  text: "________________________________",
+                }),
+              ],
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              text: "RATING",
+              heading: HeadingLevel.HEADING_3,
+            }),
+            new Paragraph({
+              text: "1 = Poor     2 = Average     3 = Good     4 = Excellent",
+            }),
+            new Paragraph({
+              text: "ASSESSMENT",
+              heading: HeadingLevel.HEADING_3,
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "1. TITLE.",
+                  bold: true,
                 }),
               ],
             }),
             new Paragraph({
+              text: "i. Content and adequacy of description ………….………………………..........................",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
               children: [
                 new TextRun({
-                  text: "Reviewer: ",
+                  text: "2. STRUCTURED ABSTRACT – For clinical studies, it should not be more than 250 words.",
                   bold: true,
-                }),
-                new TextRun({
-                  text: "[Your Name]",
                 }),
               ],
             }),
             new Paragraph({
+              text: "i. Length ……………………………………………………………….…………………….",
+            }),
+            new Paragraph({
+              text: "ii. Appropriateness of contents ………………………………….………...………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
               children: [
                 new TextRun({
-                  text: "Date: ",
+                  text: "3. OBJECTIVES OF THE ARTICLE - Keywords 3 – 6 words and abbreviations explicit.",
                   bold: true,
-                }),
-                new TextRun({
-                  text: new Date().toLocaleDateString(),
                 }),
               ],
             }),
             new Paragraph({
-              text: "",
+              text: "i. Clarity ………………………………………………………….…….……….",
             }),
             new Paragraph({
-              text: "1. ORIGINALITY & SIGNIFICANCE",
-              heading: HeadingLevel.HEADING_2,
+              text: "ii. Relevance to current practice……………………………………………………",
             }),
-            new Paragraph({
-              text: "☐ Highly original and significant contribution",
-            }),
-            new Paragraph({
-              text: "☐ Moderately original with clear significance",
-            }),
-            new Paragraph({
-              text: "☐ Limited originality but some significance",
-            }),
-            new Paragraph({
-              text: "☐ Lacks originality and significance",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "2. METHODOLOGY",
-              heading: HeadingLevel.HEADING_2,
-            }),
-            new Paragraph({
-              text: "☐ Methodology is sound and appropriate",
-            }),
-            new Paragraph({
-              text: "☐ Methodology is generally sound with minor issues",
-            }),
-            new Paragraph({
-              text: "☐ Methodology has significant flaws",
-            }),
-            new Paragraph({
-              text: "☐ Methodology is fundamentally flawed",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "3. CLARITY & PRESENTATION",
-              heading: HeadingLevel.HEADING_2,
-            }),
-            new Paragraph({
-              text: "☐ Very clear and well-written",
-            }),
-            new Paragraph({
-              text: "☐ Generally clear with minor improvements needed",
-            }),
-            new Paragraph({
-              text: "☐ Requires significant improvement in clarity",
-            }),
-            new Paragraph({
-              text: "☐ Poorly written and unclear",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "4. REFERENCES & CITATIONS",
-              heading: HeadingLevel.HEADING_2,
-            }),
-            new Paragraph({
-              text: "☐ Comprehensive and appropriate",
-            }),
-            new Paragraph({
-              text: "☐ Generally appropriate with minor gaps",
-            }),
-            new Paragraph({
-              text: "☐ Some important references missing",
-            }),
-            new Paragraph({
-              text: "☐ Inadequate referencing",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "5. OVERALL RECOMMENDATION",
-              heading: HeadingLevel.HEADING_2,
-            }),
-            new Paragraph({
-              text: "☐ Accept without correction",
-            }),
-            new Paragraph({
-              text: "☐ Accept subject to minor corrections",
-            }),
-            new Paragraph({
-              text: "☐ Accept subject to major corrections",
-            }),
-            new Paragraph({
-              text: "☐ Reject",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "DETAILED COMMENTS:",
-              heading: HeadingLevel.HEADING_2,
-            }),
-            new Paragraph({
-              text: "[Provide detailed feedback here]",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "CONFIDENTIAL COMMENTS TO EDITOR:",
-              heading: HeadingLevel.HEADING_2,
-            }),
-            new Paragraph({
-              text: "[Comments for editor only]",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "",
-            }),
-            new Paragraph({
-              text: "",
-            }),
+            new Paragraph({ text: "" }),
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "REVIEWER SIGNATURE: ",
+                  text: "4. INTRODUCTION AND LITERATURE REVIEW – Figures referenced as e.g., Fig. 2.",
                   bold: true,
-                }),
-                new TextRun({
-                  text: "________________",
                 }),
               ],
             }),
             new Paragraph({
+              text: "i. Relevance to research objectives……………………….….………………………….",
+            }),
+            new Paragraph({
+              text: "ii. How current ……………….………………………………………………………….",
+            }),
+            new Paragraph({
+              text: "iii. Use of African/ Nigerian Literatures…………………………………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
               children: [
                 new TextRun({
-                  text: "DATE: ",
+                  text: "5. STUDY DESIGN – Review either STROBES, PRISMA, CONSORT Guideline e.t.c below.",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Was it stated ………………………………..…………………………………………",
+            }),
+            new Paragraph({
+              text: "ii. Appropriates to study objectives ………………….…………………………………….",
+            }),
+            new Paragraph({
+              text: "iii. Sampling technique used ……………………..………………………...........................",
+            }),
+            new Paragraph({
+              text: "iv. Sample size ……………………………………………………………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "6. STATISTICAL ANALYSIS",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Statement on the type used ……………………………..…………………………………",
+            }),
+            new Paragraph({
+              text: "ii. Appropriateness ……………………………………………………………………",
+            }),
+            new Paragraph({
+              text: "iii. Adequacy …………………………………………………………………………",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "7. RESULTS – Each table should be numbered in Arabic's, have title and be at a new page.",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Is it applicable …………………………………………………………………….",
+            }),
+            new Paragraph({
+              text: "ii. Accuracy …………………………………………………………………………...",
+            }),
+            new Paragraph({
+              text: "iii. Appropriateness of illustrations ……………………………….………………….",
+            }),
+            new Paragraph({
+              text: "iv. Effectiveness of display methods ………………………………………………….",
+            }),
+            new Paragraph({
+              text: "v. Can any of the tables or figures be deleted without losing intended information? ….",
+            }),
+            new Paragraph({
+              text: "vi. Yes / No. If yes, please specify ……….……………………………………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "8. DISCUSSION – Original article word count 2000 – 3000, and 1500 words for commentaries.",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Internal Consistency of arguments ……………………………………………….",
+            }),
+            new Paragraph({
+              text: "ii. Clarity of presentation …………………………………………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "9. CONCLUSIONS – British conventions of spelling, punctuation, and grammar.",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Consistency with study design ……………………………………………………….",
+            }),
+            new Paragraph({
+              text: "ii. Consistency with results ………………......................................................................",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "10. REFERENCES (VANCOUVER SUPERSCRIPT) – Not > 6 references for short commentaries.",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Conform to Journal formal: Inconsistency in writing the authors of the references. Also there is inconsistency in use of case of name of authors.…………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "11. OVERALL QUALITY,",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "i. Originality of value ………….…………............................................................................",
+            }),
+            new Paragraph({
+              text: "ii. Contribution to knowledge.………………………………….………………………........",
+            }),
+            new Paragraph({
+              text: "iii. Overall length…………………………………………………………………………..…...",
+            }),
+            new Paragraph({
+              text: "iv. Literary style (e.g., sequence of tenses et cetera) ………………………….………………...",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "12. FINAL RECOMMENDATION",
+                  bold: true,
+                }),
+              ],
+            }),
+            new Paragraph({
+              text: "The paper is:",
+            }),
+            new Paragraph({
+              text: "i. Accepted……………………………………………………………………………………...",
+            }),
+            new Paragraph({
+              text: "ii. Accepted subject to the modifications indicated below in the comment session: ……….",
+            }),
+            new Paragraph({
+              text: "iii. Rejected……….………………………………………………………………………….",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "13. ADDITIONAL COMMENTS: ",
                   bold: true,
                 }),
                 new TextRun({
-                  text: "________________",
-                }),
+                  text: "……………………………………………………………....."}),
               ],
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              text: "Thank you.",
+            }),
+            new Paragraph({ text: "" }),
+            new Paragraph({ text: "" }),
+            new Paragraph({
+              text: "_________________________",
+            }),
+            new Paragraph({
+              text: "Name, Signature & Date.",
             }),
           ],
         }],
