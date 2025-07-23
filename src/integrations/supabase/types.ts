@@ -232,7 +232,14 @@ export type Database = {
         | "accept_major_corrections"
         | "published"
         | "reject"
-      review_status: "assigned" | "in_progress" | "completed" | "overdue"
+      review_status:
+        | "assigned"
+        | "in_progress"
+        | "completed"
+        | "overdue"
+        | "pending_admin_approval"
+        | "admin_approved"
+        | "admin_rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -375,7 +382,15 @@ export const Constants = {
         "published",
         "reject",
       ],
-      review_status: ["assigned", "in_progress", "completed", "overdue"],
+      review_status: [
+        "assigned",
+        "in_progress",
+        "completed",
+        "overdue",
+        "pending_admin_approval",
+        "admin_approved",
+        "admin_rejected",
+      ],
     },
   },
 } as const

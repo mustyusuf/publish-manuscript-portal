@@ -48,9 +48,32 @@ interface User {
   expertise_areas: string[];
 }
 
+interface PendingReview {
+  id: string;
+  status: string;
+  assigned_date: string;
+  due_date: string;
+  completed_date: string | null;
+  comments: string | null;
+  recommendation: string | null;
+  assessment_file_path: string | null;
+  reviewed_manuscript_path: string | null;
+  manuscript: {
+    id: string;
+    title: string;
+    abstract: string;
+  };
+  reviewer: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
 const AdminDashboard = () => {
   const [manuscripts, setManuscripts] = useState<Manuscript[]>([]);
   const [reviewers, setReviewers] = useState<User[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -76,6 +99,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
+    fetchPendingReviews();
   }, []);
 
   const fetchData = async () => {
@@ -192,6 +216,162 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
       console.log('Setting loading to false');
+    }
+  };
+
+  const fetchPendingReviews = async () => {
+    try {
+      // Fetch reviews with pending_admin_approval status
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from('reviews')
+        .select(`
+          id,
+          status,
+          assigned_date,
+          due_date,
+          completed_date,
+          comments,
+          recommendation,
+          assessment_file_path,
+          reviewed_manuscript_path,
+          manuscript_id,
+          reviewer_id
+        `)
+        .eq('status', 'pending_admin_approval')
+        .order('completed_date', { ascending: false });
+
+      if (reviewsError) throw reviewsError;
+
+      // Fetch manuscripts for reviews
+      const manuscriptIds = reviewsData?.map(r => r.manuscript_id) || [];
+      const { data: manuscriptsData, error: manuscriptsError } = await supabase
+        .from('manuscripts')
+        .select('id, title, abstract')
+        .in('id', manuscriptIds);
+
+      if (manuscriptsError) throw manuscriptsError;
+
+      // Fetch reviewer profiles
+      const reviewerIds = reviewsData?.map(r => r.reviewer_id) || [];
+      const { data: reviewersData, error: reviewersProfileError } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name, email')
+        .in('user_id', reviewerIds);
+
+      if (reviewersProfileError) throw reviewersProfileError;
+
+      // Transform data
+      const transformedReviews = reviewsData?.map(review => {
+        const manuscript = manuscriptsData?.find(m => m.id === review.manuscript_id);
+        const reviewer = reviewersData?.find(r => r.user_id === review.reviewer_id);
+        
+        return {
+          id: review.id,
+          status: review.status,
+          assigned_date: review.assigned_date,
+          due_date: review.due_date,
+          completed_date: review.completed_date,
+          comments: review.comments,
+          recommendation: review.recommendation,
+          assessment_file_path: review.assessment_file_path,
+          reviewed_manuscript_path: review.reviewed_manuscript_path,
+          manuscript: {
+            id: manuscript?.id || '',
+            title: manuscript?.title || '',
+            abstract: manuscript?.abstract || ''
+          },
+          reviewer: {
+            first_name: reviewer?.first_name || '',
+            last_name: reviewer?.last_name || '',
+            email: reviewer?.email || ''
+          }
+        };
+      }) as PendingReview[] || [];
+
+      setPendingReviews(transformedReviews);
+    } catch (error) {
+      console.error('Error fetching pending reviews:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load pending reviews.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const approveReview = async (reviewId: string) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .update({ status: 'admin_approved' })
+        .eq('id', reviewId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Review approved and sent to author.",
+      });
+
+      fetchPendingReviews();
+    } catch (error) {
+      console.error('Error approving review:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve review.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const rejectReview = async (reviewId: string) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .update({ status: 'admin_rejected' })
+        .eq('id', reviewId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Review rejected and sent back to reviewer.",
+      });
+
+      fetchPendingReviews();
+    } catch (error) {
+      console.error('Error rejecting review:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject review.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadReviewFile = async (filePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('manuscripts')
+        .download(filePath);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download file.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -556,7 +736,14 @@ const AdminDashboard = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -567,8 +754,9 @@ const AdminDashboard = () => {
       </div>
 
       <Tabs defaultValue="manuscripts" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="manuscripts">Manuscript Management</TabsTrigger>
+          <TabsTrigger value="reviews">Pending Reviews</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="profile">Profile</TabsTrigger>
         </TabsList>
@@ -905,213 +1093,141 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
-
-          {/* Manuscript Details Dialog */}
-          <Dialog open={!!viewingManuscript} onOpenChange={() => setViewingManuscript(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Manuscript Details</DialogTitle>
-              </DialogHeader>
-              {viewingManuscript && (
-                <div className="space-y-6">
-                  {/* Title and Basic Info */}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">{viewingManuscript.title}</h3>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                        <span>Status: <Badge className={getStatusColor(viewingManuscript.status)}>{viewingManuscript.status.replace('_', ' ')}</Badge></span>
-                        <span>Submitted: {new Date(viewingManuscript.submission_date).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Author Information</h4>
-                      <div className="bg-muted/50 p-3 rounded-lg">
-                        <p><strong>Name:</strong> {viewingManuscript.author.first_name} {viewingManuscript.author.last_name}</p>
-                        <p><strong>Email:</strong> {viewingManuscript.author.email}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Abstract */}
-                  <div>
-                    <h4 className="font-medium mb-2">Abstract</h4>
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <p className="text-sm leading-relaxed">{viewingManuscript.abstract}</p>
-                    </div>
-                  </div>
-
-                  {/* Keywords */}
-                  {viewingManuscript.keywords && viewingManuscript.keywords.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Keywords</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {viewingManuscript.keywords.map((keyword, index) => (
-                          <Badge key={index} variant="secondary">{keyword}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Co-authors */}
-                  {viewingManuscript.co_authors && viewingManuscript.co_authors.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2">Co-authors</h4>
-                      <div className="bg-muted/50 p-3 rounded-lg">
-                        <ul className="space-y-1">
-                          {viewingManuscript.co_authors.map((author, index) => (
-                            <li key={index} className="text-sm">{author}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Files */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Manuscript File */}
-                    {viewingManuscript.file_path && (
-                      <div>
-                        <h4 className="font-medium mb-2">Manuscript File</h4>
-                        <div className="bg-muted/50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-sm">{viewingManuscript.file_name}</p>
-                              {viewingManuscript.file_size && (
-                                <p className="text-xs text-muted-foreground">
-                                  {(viewingManuscript.file_size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadManuscript(viewingManuscript)}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cover Letter */}
-                    {viewingManuscript.cover_letter_path && (
-                      <div>
-                        <h4 className="font-medium mb-2">Cover Letter</h4>
-                        <div className="bg-muted/50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-sm">{viewingManuscript.cover_letter_name}</p>
-                              {viewingManuscript.cover_letter_size && (
-                                <p className="text-xs text-muted-foreground">
-                                  {(viewingManuscript.cover_letter_size / 1024 / 1024).toFixed(2)} MB
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadCoverLetter(viewingManuscript)}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Admin Notes */}
-                  {viewingManuscript.admin_notes && (
-                    <div>
-                      <h4 className="font-medium mb-2">Admin Notes</h4>
-                      <div className="bg-muted/50 p-4 rounded-lg">
-                        <p className="text-sm leading-relaxed">{viewingManuscript.admin_notes}</p>
-                      </div>
-                    </div>
-                  )}
+        </TabsContent>
+        
+        <TabsContent value="reviews" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Review Approvals</CardTitle>
+              <CardDescription>
+                Review and approve or reject reviewer submissions before sending to authors
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pendingReviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No pending reviews for approval.</p>
                 </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Edit Manuscript Dialog */}
-          <Dialog open={!!editingManuscript} onOpenChange={() => setEditingManuscript(null)}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Edit Manuscript</DialogTitle>
-                <DialogDescription>
-                  Update manuscript information and admin notes
-                </DialogDescription>
-              </DialogHeader>
-              {editingManuscript && (
+              ) : (
                 <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-title">Title</Label>
-                    <Input
-                      id="edit-title"
-                      value={editFormData.title}
-                      onChange={(e) => setEditFormData({...editFormData, title: e.target.value})}
-                      className="mt-1"
-                    />
-                  </div>
-
-
-                  <div>
-                    <Label htmlFor="edit-keywords">Keywords (comma-separated)</Label>
-                    <Input
-                      id="edit-keywords"
-                      value={editFormData.keywords.join(', ')}
-                      onChange={(e) => setEditFormData({
-                        ...editFormData, 
-                        keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k)
-                      })}
-                      className="mt-1"
-                      placeholder="keyword1, keyword2, keyword3"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-coauthors">Co-authors (comma-separated)</Label>
-                    <Input
-                      id="edit-coauthors"
-                      value={editFormData.co_authors.join(', ')}
-                      onChange={(e) => setEditFormData({
-                        ...editFormData, 
-                        co_authors: e.target.value.split(',').map(a => a.trim()).filter(a => a)
-                      })}
-                      className="mt-1"
-                      placeholder="Author Name 1, Author Name 2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-admin-notes">Admin Notes</Label>
-                    <Textarea
-                      id="edit-admin-notes"
-                      value={editFormData.admin_notes}
-                      onChange={(e) => setEditFormData({...editFormData, admin_notes: e.target.value})}
-                      rows={4}
-                      className="mt-1"
-                      placeholder="Internal notes for admin use..."
-                    />
-                  </div>
-
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setEditingManuscript(null)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={updateManuscript}>
-                      Update Manuscript
-                    </Button>
-                  </DialogFooter>
+                  {pendingReviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="border rounded-lg p-6 space-y-4"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-lg">{review.manuscript.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Reviewed by: {review.reviewer.first_name} {review.reviewer.last_name} ({review.reviewer.email})
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Submitted: {new Date(review.completed_date || '').toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge className="bg-orange-100 text-orange-800">
+                          Pending Approval
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="font-medium mb-2">Recommendation</h4>
+                          <div className="bg-muted/50 p-3 rounded-lg">
+                            <p className="text-sm">{review.recommendation || 'No recommendation provided'}</p>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-medium mb-2">Comments</h4>
+                          <div className="bg-muted/50 p-3 rounded-lg max-h-32 overflow-y-auto">
+                            <p className="text-sm">{review.comments || 'No comments provided'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2">
+                        {review.assessment_file_path && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadReviewFile(review.assessment_file_path!, 'assessment.pdf')}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Assessment Form
+                          </Button>
+                        )}
+                        
+                        {review.reviewed_manuscript_path && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadReviewFile(review.reviewed_manuscript_path!, 'reviewed_manuscript.pdf')}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Reviewed Manuscript
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2 pt-4 border-t">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button className="bg-green-600 hover:bg-green-700">
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve & Send to Author
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Approve Review</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to approve this review and send it to the author?
+                                This action will make the review visible to the manuscript author.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => approveReview(review.id)}>
+                                Approve Review
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject & Return to Reviewer
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Reject Review</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to reject this review?
+                                This will send the review back to the reviewer for revision.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => rejectReview(review.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Reject Review
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-            </DialogContent>
-          </Dialog>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="users">
@@ -1123,31 +1239,211 @@ const AdminDashboard = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Manuscript Delete Confirmation Dialog */}
-      <AlertDialog open={!!manuscriptToDelete} onOpenChange={() => setManuscriptToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Manuscript Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{manuscriptToDelete?.title}"?
-              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                <p className="text-sm text-red-800 dark:text-red-200">
-                  ⚠️ This action cannot be undone. All associated files and data will be permanently deleted.
-                </p>
+      {/* Manuscript Details Dialog */}
+      <Dialog open={!!viewingManuscript} onOpenChange={() => setViewingManuscript(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manuscript Details</DialogTitle>
+          </DialogHeader>
+          {viewingManuscript && (
+            <div className="space-y-6">
+              {/* Title and Basic Info */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">{viewingManuscript.title}</h3>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <span>Status: <Badge className={getStatusColor(viewingManuscript.status)}>{viewingManuscript.status.replace('_', ' ')}</Badge></span>
+                    <span>Submitted: {new Date(viewingManuscript.submission_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Author Information</h4>
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p><strong>Name:</strong> {viewingManuscript.author.first_name} {viewingManuscript.author.last_name}</p>
+                    <p><strong>Email:</strong> {viewingManuscript.author.email}</p>
+                  </div>
+                </div>
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeleteManuscript}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Manuscript
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+              {/* Abstract */}
+              <div>
+                <h4 className="font-medium mb-2">Abstract</h4>
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm leading-relaxed">{viewingManuscript.abstract}</p>
+                </div>
+              </div>
+
+              {/* Keywords */}
+              {viewingManuscript.keywords && viewingManuscript.keywords.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Keywords</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {viewingManuscript.keywords.map((keyword, index) => (
+                      <Badge key={index} variant="secondary">{keyword}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Co-authors */}
+              {viewingManuscript.co_authors && viewingManuscript.co_authors.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Co-authors</h4>
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <ul className="space-y-1">
+                      {viewingManuscript.co_authors.map((author, index) => (
+                        <li key={index} className="text-sm">{author}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Files */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Manuscript File */}
+                {viewingManuscript.file_path && (
+                  <div>
+                    <h4 className="font-medium mb-2">Manuscript File</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{viewingManuscript.file_name}</p>
+                          {viewingManuscript.file_size && (
+                            <p className="text-xs text-muted-foreground">
+                              {(viewingManuscript.file_size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadManuscript(viewingManuscript)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cover Letter */}
+                {viewingManuscript.cover_letter_path && (
+                  <div>
+                    <h4 className="font-medium mb-2">Cover Letter</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{viewingManuscript.cover_letter_name}</p>
+                          {viewingManuscript.cover_letter_size && (
+                            <p className="text-xs text-muted-foreground">
+                              {(viewingManuscript.cover_letter_size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadCoverLetter(viewingManuscript)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Admin Notes */}
+              {viewingManuscript.admin_notes && (
+                <div>
+                  <h4 className="font-medium mb-2">Admin Notes</h4>
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <p className="text-sm leading-relaxed">{viewingManuscript.admin_notes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Manuscript Dialog */}
+      <Dialog open={!!editingManuscript} onOpenChange={() => setEditingManuscript(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Manuscript</DialogTitle>
+            <DialogDescription>
+              Update manuscript information and admin notes
+            </DialogDescription>
+          </DialogHeader>
+          {editingManuscript && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-title">Title</Label>
+                <Input
+                  id="edit-title"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({...editFormData, title: e.target.value})}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-keywords">Keywords (comma-separated)</Label>
+                <Input
+                  id="edit-keywords"
+                  value={editFormData.keywords.join(', ')}
+                  onChange={(e) => setEditFormData({
+                    ...editFormData, 
+                    keywords: e.target.value.split(',').map(k => k.trim()).filter(k => k)
+                  })}
+                  className="mt-1"
+                  placeholder="keyword1, keyword2, keyword3"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-coauthors">Co-authors (comma-separated)</Label>
+                <Input
+                  id="edit-coauthors"
+                  value={editFormData.co_authors.join(', ')}
+                  onChange={(e) => setEditFormData({
+                    ...editFormData, 
+                    co_authors: e.target.value.split(',').map(a => a.trim()).filter(a => a)
+                  })}
+                  className="mt-1"
+                  placeholder="Author Name 1, Author Name 2"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-admin-notes">Admin Notes</Label>
+                <Textarea
+                  id="edit-admin-notes"
+                  value={editFormData.admin_notes}
+                  onChange={(e) => setEditFormData({...editFormData, admin_notes: e.target.value})}
+                  rows={4}
+                  className="mt-1"
+                  placeholder="Internal notes for admin use..."
+                />
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingManuscript(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={updateManuscript}>
+                  Update Manuscript
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

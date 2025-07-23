@@ -264,7 +264,7 @@ const ReviewerDashboard = () => {
         .update({
           recommendation,
           comments,
-          status: 'completed',
+          status: 'pending_admin_approval',
           completed_date: new Date().toISOString(),
           assessment_file_path: assessmentFilePath || null,
           reviewed_manuscript_path: reviewedManuscriptPath || null
@@ -275,7 +275,7 @@ const ReviewerDashboard = () => {
 
       toast({
         title: "Success",
-        description: "Review submitted successfully!",
+        description: "Review submitted for admin approval!",
       });
 
       // Reset file inputs
@@ -302,6 +302,12 @@ const ReviewerDashboard = () => {
         return 'bg-blue-100 text-blue-800';
       case 'completed':
         return 'bg-green-100 text-green-800';
+      case 'pending_admin_approval':
+        return 'bg-orange-100 text-orange-800';
+      case 'admin_approved':
+        return 'bg-green-100 text-green-800';
+      case 'admin_rejected':
+        return 'bg-red-100 text-red-800';
       case 'overdue':
         return 'bg-red-100 text-red-800';
       default:
