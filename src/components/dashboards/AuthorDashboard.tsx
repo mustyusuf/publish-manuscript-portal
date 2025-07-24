@@ -37,6 +37,13 @@ interface Review {
   completed_date: string | null;
 }
 
+interface FinalDocument {
+  id: string;
+  file_name: string;
+  file_path: string;
+  upload_date: string;
+}
+
 const AuthorDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -47,6 +54,7 @@ const AuthorDashboard = () => {
   const [submitting, setSubmitting] = useState(false);
   const [selectedManuscript, setSelectedManuscript] = useState<Manuscript | null>(null);
   const [manuscriptReviews, setManuscriptReviews] = useState<Review[]>([]);
+  const [finalDocuments, setFinalDocuments] = useState<FinalDocument[]>([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -164,7 +172,7 @@ const AuthorDashboard = () => {
         .from('reviews')
         .select('*')
         .eq('manuscript_id', manuscriptId)
-        .eq('status', 'completed')
+        .eq('status', 'admin_approved')
         .not('completed_date', 'is', null); // Only show reviews that are actually completed
 
       if (error) {
@@ -178,10 +186,32 @@ const AuthorDashboard = () => {
     }
   };
 
+  const fetchFinalDocuments = async (manuscriptId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('final_documents')
+        .select('id, file_name, file_path, upload_date')
+        .eq('manuscript_id', manuscriptId)
+        .order('upload_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching final documents:', error);
+        return;
+      }
+
+      setFinalDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching final documents:', error);
+    }
+  };
+
   const handleViewManuscript = async (manuscript: Manuscript) => {
     setSelectedManuscript(manuscript);
     if (manuscript.id) {
-      await fetchManuscriptReviews(manuscript.id);
+      await Promise.all([
+        fetchManuscriptReviews(manuscript.id),
+        fetchFinalDocuments(manuscript.id)
+      ]);
     }
   };
 
@@ -509,55 +539,87 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                 )}
               </div>
 
-              <div>
-                <h4 className="font-medium mb-4">Reviews ({manuscriptReviews.length})</h4>
-                {manuscriptReviews.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No reviews available yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {manuscriptReviews.map((review) => (
-                      <Card key={review.id} className="p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <p className="font-medium">Review #{review.id?.slice(0, 8)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Completed: {review.completed_date ? new Date(review.completed_date).toLocaleDateString() : 'Pending'}
-                            </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium mb-4">Admin Review Documents ({finalDocuments.length})</h4>
+                  {finalDocuments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No review documents available yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {finalDocuments.map((doc) => (
+                        <Card key={doc.id} className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{doc.file_name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Uploaded: {new Date(doc.upload_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadFile(doc.file_path, doc.file_name)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => downloadReview(review)}
-                          >
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </Button>
-                        </div>
-                        
-                        {review.rating && (
-                          <div className="mb-2">
-                            <span className="font-medium">Rating: </span>
-                            <Badge variant="secondary">{review.rating}/10</Badge>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="font-medium mb-4">Reviews ({manuscriptReviews.length})</h4>
+                  {manuscriptReviews.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No reviews available yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {manuscriptReviews.map((review) => (
+                        <Card key={review.id} className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-medium">Review #{review.id?.slice(0, 8)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Completed: {review.completed_date ? new Date(review.completed_date).toLocaleDateString() : 'Pending'}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadReview(review)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </Button>
                           </div>
-                        )}
-                        
-                        {review.recommendation && (
-                          <div className="mb-2">
-                            <span className="font-medium">Recommendation: </span>
-                            <span className="text-sm">{review.recommendation}</span>
-                          </div>
-                        )}
-                        
-                        {review.comments && (
-                          <div>
-                            <span className="font-medium">Comments: </span>
-                            <p className="text-sm text-muted-foreground mt-1">{review.comments}</p>
-                          </div>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                          
+                          {review.rating && (
+                            <div className="mb-2">
+                              <span className="font-medium">Rating: </span>
+                              <Badge variant="secondary">{review.rating}/10</Badge>
+                            </div>
+                          )}
+                          
+                          {review.recommendation && (
+                            <div className="mb-2">
+                              <span className="font-medium">Recommendation: </span>
+                              <span className="text-sm">{review.recommendation}</span>
+                            </div>
+                          )}
+                          
+                          {review.comments && (
+                            <div>
+                              <span className="font-medium">Comments: </span>
+                              <p className="text-sm text-muted-foreground mt-1">{review.comments}</p>
+                            </div>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

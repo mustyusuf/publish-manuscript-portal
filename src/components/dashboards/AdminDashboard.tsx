@@ -12,6 +12,7 @@ import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, 
 import UserManagement from '@/components/UserManagement';
 import UserProfile from '@/components/UserProfile';
 import FileUpload from '@/components/FileUpload';
+import ReviewManagement from '@/components/ReviewManagement';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -621,6 +622,19 @@ const AdminDashboard = () => {
     if (!manuscriptToDelete) return;
     
     try {
+      // First delete related reviews
+      await supabase
+        .from('reviews')
+        .delete()
+        .eq('manuscript_id', manuscriptToDelete.id);
+
+      // Then delete related final documents
+      await supabase
+        .from('final_documents')
+        .delete()
+        .eq('manuscript_id', manuscriptToDelete.id);
+
+      // Finally delete the manuscript
       const { error } = await supabase
         .from('manuscripts')
         .delete()
@@ -1096,138 +1110,7 @@ const AdminDashboard = () => {
         </TabsContent>
         
         <TabsContent value="reviews" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Review Approvals</CardTitle>
-              <CardDescription>
-                Review and approve or reject reviewer submissions before sending to authors
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingReviews.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No pending reviews for approval.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {pendingReviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="border rounded-lg p-6 space-y-4"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-2">
-                          <h3 className="font-semibold text-lg">{review.manuscript.title}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Reviewed by: {review.reviewer.first_name} {review.reviewer.last_name} ({review.reviewer.email})
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Submitted: {new Date(review.completed_date || '').toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge className="bg-orange-100 text-orange-800">
-                          Pending Approval
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Recommendation</h4>
-                          <div className="bg-muted/50 p-3 rounded-lg">
-                            <p className="text-sm">{review.recommendation || 'No recommendation provided'}</p>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="font-medium mb-2">Comments</h4>
-                          <div className="bg-muted/50 p-3 rounded-lg max-h-32 overflow-y-auto">
-                            <p className="text-sm">{review.comments || 'No comments provided'}</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-2">
-                        {review.assessment_file_path && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadReviewFile(review.assessment_file_path!, 'assessment.pdf')}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Assessment Form
-                          </Button>
-                        )}
-                        
-                        {review.reviewed_manuscript_path && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadReviewFile(review.reviewed_manuscript_path!, 'reviewed_manuscript.pdf')}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Reviewed Manuscript
-                          </Button>
-                        )}
-                      </div>
-                      
-                      <div className="flex gap-2 pt-4 border-t">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button className="bg-green-600 hover:bg-green-700">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Approve & Send to Author
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Approve Review</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to approve this review and send it to the author?
-                                This action will make the review visible to the manuscript author.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => approveReview(review.id)}>
-                                Approve Review
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive">
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Reject & Return to Reviewer
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Reject Review</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to reject this review?
-                                This will send the review back to the reviewer for revision.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => rejectReview(review.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Reject Review
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ReviewManagement />
         </TabsContent>
         
         <TabsContent value="users">

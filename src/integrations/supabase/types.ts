@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      final_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          manuscript_id: string
+          updated_at: string
+          upload_date: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          manuscript_id: string
+          updated_at?: string
+          upload_date?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          manuscript_id?: string
+          updated_at?: string
+          upload_date?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "final_documents_manuscript_id_fkey"
+            columns: ["manuscript_id"]
+            isOneToOne: false
+            referencedRelation: "manuscripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manuscripts: {
         Row: {
           abstract: string
