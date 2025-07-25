@@ -201,13 +201,17 @@ const ReviewManagement = () => {
 
   const handleFinalDocumentsUpload = async (manuscriptId: string, files: any[]) => {
     try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       // Insert records into final_documents table
       const documentInserts = files.map(file => ({
         manuscript_id: manuscriptId,
         file_name: file.name,
         file_path: file.path,
-        file_size: file.size,
-        uploaded_by: '00000000-0000-0000-0000-000000000000' // This will be replaced by auth.uid() in the database
+        file_size: file.size || 0,
+        uploaded_by: user.id
       }));
 
       const { error } = await supabase
@@ -422,7 +426,9 @@ const ReviewManagement = () => {
                             <FileUpload
                               bucketName="manuscripts"
                               folderPath={`final-documents/${manuscript.manuscript_id}`}
-                              onFilesUploaded={(files) => handleFinalDocumentsUpload(manuscript.manuscript_id, files)}
+                              onFilesUploaded={(files) => {
+                                handleFinalDocumentsUpload(manuscript.manuscript_id, files);
+                              }}
                               maxFiles={10}
                               label="Upload Final Documents"
                             />

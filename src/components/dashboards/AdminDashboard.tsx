@@ -302,6 +302,9 @@ const AdminDashboard = () => {
 
   const approveReview = async (reviewId: string) => {
     try {
+      const confirmed = window.confirm("Are you sure you want to approve this review and send it to the author?");
+      if (!confirmed) return;
+
       const { error } = await supabase
         .from('reviews')
         .update({ status: 'admin_approved' })
@@ -327,6 +330,9 @@ const AdminDashboard = () => {
 
   const rejectReview = async (reviewId: string) => {
     try {
+      const confirmed = window.confirm("Are you sure you want to reject this review and send it back to the reviewer?");
+      if (!confirmed) return;
+
       const { error } = await supabase
         .from('reviews')
         .update({ status: 'admin_rejected' })
@@ -438,8 +444,13 @@ const AdminDashboard = () => {
     }
   };
 
-  const updateManuscriptStatus = async (manuscriptId: string, status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected' | 'internal_review' | 'external_review' | 'accept_without_correction' | 'accept_minor_corrections' | 'accept_major_corrections' | 'published' | 'reject') => {
+  const updateManuscriptStatus = async (manuscriptId: string, status: 'submitted' | 'under_review' | 'revision_requested' | 'accepted' | 'rejected' | 'internal_review' | 'external_review' | 'accept_without_correction' | 'accept_minor_corrections' | 'accept_major_corrections' | 'published' | 'reject', showConfirmation = true) => {
     try {
+      if (showConfirmation) {
+        const confirmed = window.confirm(`Are you sure you want to change the status to "${status.replace(/_/g, ' ')}"?`);
+        if (!confirmed) return;
+      }
+
       const { error } = await supabase
         .from('manuscripts')
         .update({ 
@@ -622,13 +633,34 @@ const AdminDashboard = () => {
     if (!manuscriptToDelete) return;
     
     try {
-      // First delete related reviews
+      // First delete the files from storage
+      const filesToDelete = [];
+      if (manuscriptToDelete.file_path) {
+        filesToDelete.push(manuscriptToDelete.file_path);
+      }
+      if (manuscriptToDelete.cover_letter_path) {
+        filesToDelete.push(manuscriptToDelete.cover_letter_path);
+      }
+
+      // Delete files from storage if they exist
+      if (filesToDelete.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('manuscripts')
+          .remove(filesToDelete);
+        
+        if (storageError) {
+          console.warn('Error deleting files from storage:', storageError);
+          // Continue with manuscript deletion even if file deletion fails
+        }
+      }
+
+      // Delete related reviews
       await supabase
         .from('reviews')
         .delete()
         .eq('manuscript_id', manuscriptToDelete.id);
 
-      // Then delete related final documents
+      // Delete related final documents
       await supabase
         .from('final_documents')
         .delete()
@@ -644,7 +676,7 @@ const AdminDashboard = () => {
 
       toast({
         title: "Success",
-        description: "Manuscript deleted successfully.",
+        description: "Manuscript and associated files deleted successfully.",
       });
 
       fetchData();

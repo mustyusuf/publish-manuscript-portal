@@ -167,20 +167,31 @@ const AuthorDashboard = () => {
 
   const fetchManuscriptReviews = async (manuscriptId: string) => {
     try {
-      // Only fetch completed reviews that are assigned to the author
-      const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('*')
+      // Only show reviews if there are final documents uploaded by admin
+      const { data: finalDocs } = await supabase
+        .from('final_documents')
+        .select('id')
         .eq('manuscript_id', manuscriptId)
-        .eq('status', 'admin_approved')
-        .not('completed_date', 'is', null); // Only show reviews that are actually completed
+        .limit(1);
 
-      if (error) {
-        console.error('Error fetching reviews:', error);
-        return;
+      // Only fetch reviews if admin has uploaded final documents
+      if (finalDocs && finalDocs.length > 0) {
+        const { data: reviews, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('manuscript_id', manuscriptId)
+          .eq('status', 'admin_approved')
+          .not('completed_date', 'is', null);
+
+        if (error) {
+          console.error('Error fetching reviews:', error);
+          return;
+        }
+
+        setManuscriptReviews(reviews || []);
+      } else {
+        setManuscriptReviews([]); // No reviews visible until admin uploads documents
       }
-
-      setManuscriptReviews(reviews || []);
     } catch (error) {
       console.error('Error fetching reviews:', error);
     }
@@ -467,15 +478,21 @@ Completed Date: ${review.completed_date ? new Date(review.completed_date).toLoca
                           View
                         </Button>
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewManuscript(manuscript)}
-                        >
-                          <FileText className="mr-2 h-4 w-4" />
-                          Reviews
-                        </Button>
+                       <TableCell>
+                        {finalDocuments.length > 0 ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewManuscript(manuscript)}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Reviews
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            Pending Admin Review
+                          </span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

@@ -222,6 +222,10 @@ const ReviewerDashboard = () => {
 
   const submitReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    
+    const confirmed = window.confirm("Are you sure you want to submit this review? Once submitted, you cannot edit it.");
+    if (!confirmed) return;
+    
     setSubmittingReview(true);
 
     try {
