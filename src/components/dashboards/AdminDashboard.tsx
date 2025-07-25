@@ -1359,6 +1359,32 @@ const AdminDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!manuscriptToDelete} onOpenChange={() => setManuscriptToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Manuscript</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{manuscriptToDelete?.title}"? This action cannot be undone and will permanently delete:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>The manuscript and its files</li>
+                <li>All associated reviews</li>
+                <li>All final documents</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteManuscript}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Manuscript
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
