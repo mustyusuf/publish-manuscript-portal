@@ -674,12 +674,15 @@ const AdminDashboard = () => {
 
       if (error) throw error;
 
+      console.log(`Successfully deleted manuscript ${manuscriptToDelete.id}`);
+
       toast({
         title: "Success",
         description: "Manuscript and associated files deleted successfully.",
       });
 
-      fetchData();
+      // Refresh the data to update the table
+      await fetchData();
       setManuscriptToDelete(null);
     } catch (error) {
       console.error('Error deleting manuscript:', error);

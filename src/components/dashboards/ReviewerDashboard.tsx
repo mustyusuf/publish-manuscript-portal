@@ -162,6 +162,9 @@ const ReviewerDashboard = () => {
     try {
       const formData = new FormData(e.currentTarget);
       const title = formData.get('title') as string;
+      const abstract = formData.get('abstract') as string;
+      const keywords = (formData.get('keywords') as string).split(',').map(k => k.trim()).filter(k => k);
+      const coAuthors = (formData.get('co_authors') as string).split(',').map(a => a.trim()).filter(a => a);
 
       // Upload manuscript file
       const manuscriptFileExt = manuscriptFile.name.split('.').pop();
@@ -183,23 +186,28 @@ const ReviewerDashboard = () => {
 
       if (coverLetterUploadError) throw coverLetterUploadError;
 
-      // Create manuscript record
+      // Create manuscript record with all required fields
       const { error: insertError } = await supabase
         .from('manuscripts')
         .insert({
           title,
-          abstract: '',
+          abstract,
           author_id: user.id,
           file_path: manuscriptFileName,
           file_name: manuscriptFile.name,
           file_size: manuscriptFile.size,
+          cover_letter_path: coverLetterFileName,
+          cover_letter_name: coverLetterFile.name,
+          cover_letter_size: coverLetterFile.size,
+          keywords,
+          co_authors: coAuthors,
         });
 
       if (insertError) throw insertError;
 
       toast({
         title: "Success",
-        description: "Manuscript submitted successfully!",
+        description: "Manuscript submitted successfully! It will go through the same review process.",
       });
 
       setManuscriptFile(null);
@@ -1043,7 +1051,7 @@ const ReviewerDashboard = () => {
                 <DialogHeader>
                   <DialogTitle>Submit New Manuscript</DialogTitle>
                   <DialogDescription>
-                    Upload your manuscript and cover letter for review.
+                    Upload your manuscript and cover letter for review. Your submission will go through the same blind review process, and you may be able to review your own submission.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmitManuscript} className="space-y-4 p-1">
@@ -1055,6 +1063,41 @@ const ReviewerDashboard = () => {
                       placeholder="Enter the title of your manuscript"
                       required 
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="abstract">Abstract *</Label>
+                    <Textarea 
+                      id="abstract" 
+                      name="abstract" 
+                      placeholder="Provide a brief summary of your manuscript (max 500 words)"
+                      className="min-h-[120px] resize-y"
+                      required 
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="keywords">Keywords</Label>
+                    <Input 
+                      id="keywords" 
+                      name="keywords" 
+                      placeholder="Enter keywords separated by commas (e.g., machine learning, AI, data analysis)"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Separate multiple keywords with commas
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="co_authors">Co-Authors</Label>
+                    <Input 
+                      id="co_authors" 
+                      name="co_authors" 
+                      placeholder="Enter co-author names separated by commas"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      List all co-authors, separated by commas
+                    </p>
                   </div>
                   
                   <div className="space-y-2">
