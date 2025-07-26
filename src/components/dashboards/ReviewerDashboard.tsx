@@ -162,9 +162,6 @@ const ReviewerDashboard = () => {
     try {
       const formData = new FormData(e.currentTarget);
       const title = formData.get('title') as string;
-      const abstract = formData.get('abstract') as string;
-      const keywords = (formData.get('keywords') as string).split(',').map(k => k.trim()).filter(k => k);
-      const coAuthors = (formData.get('co_authors') as string).split(',').map(a => a.trim()).filter(a => a);
 
       // Upload manuscript file
       const manuscriptFileExt = manuscriptFile.name.split('.').pop();
@@ -186,12 +183,12 @@ const ReviewerDashboard = () => {
 
       if (coverLetterUploadError) throw coverLetterUploadError;
 
-      // Create manuscript record with all required fields
+      // Create manuscript record
       const { error: insertError } = await supabase
         .from('manuscripts')
         .insert({
           title,
-          abstract,
+          abstract: '', // Set empty abstract since it's not required
           author_id: user.id,
           file_path: manuscriptFileName,
           file_name: manuscriptFile.name,
@@ -199,15 +196,15 @@ const ReviewerDashboard = () => {
           cover_letter_path: coverLetterFileName,
           cover_letter_name: coverLetterFile.name,
           cover_letter_size: coverLetterFile.size,
-          keywords,
-          co_authors: coAuthors,
+          keywords: [],
+          co_authors: []
         });
 
       if (insertError) throw insertError;
 
       toast({
         title: "Success",
-        description: "Manuscript submitted successfully! It will go through the same review process.",
+        description: "Manuscript submitted successfully!",
       });
 
       setManuscriptFile(null);
@@ -1051,7 +1048,7 @@ const ReviewerDashboard = () => {
                 <DialogHeader>
                   <DialogTitle>Submit New Manuscript</DialogTitle>
                   <DialogDescription>
-                    Upload your manuscript and cover letter for review. Your submission will go through the same blind review process, and you may be able to review your own submission.
+                    Upload your manuscript and cover letter for review. Your submission will go through the same blind review process.
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmitManuscript} className="space-y-4 p-1">
@@ -1065,40 +1062,6 @@ const ReviewerDashboard = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="abstract">Abstract *</Label>
-                    <Textarea 
-                      id="abstract" 
-                      name="abstract" 
-                      placeholder="Provide a brief summary of your manuscript (max 500 words)"
-                      className="min-h-[120px] resize-y"
-                      required 
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="keywords">Keywords</Label>
-                    <Input 
-                      id="keywords" 
-                      name="keywords" 
-                      placeholder="Enter keywords separated by commas (e.g., machine learning, AI, data analysis)"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Separate multiple keywords with commas
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="co_authors">Co-Authors</Label>
-                    <Input 
-                      id="co_authors" 
-                      name="co_authors" 
-                      placeholder="Enter co-author names separated by commas"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      List all co-authors, separated by commas
-                    </p>
-                  </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="manuscriptFile">Upload Manuscript *</Label>
@@ -1163,18 +1126,21 @@ const ReviewerDashboard = () => {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-secondary/50">
                     <TableRow>
-                      <TableHead className="min-w-[200px]">Title</TableHead>
-                      <TableHead className="min-w-[120px]">Submitted</TableHead>
-                      <TableHead className="min-w-[100px]">Status</TableHead>
-                      <TableHead className="min-w-[120px]">Actions</TableHead>
+                      <TableHead className="font-semibold text-primary">S/N</TableHead>
+                      <TableHead className="font-semibold text-primary">File ID</TableHead>
+                      <TableHead className="font-semibold text-primary">Title</TableHead>
+                      <TableHead className="font-semibold text-primary">Submitted</TableHead>
+                      <TableHead className="font-semibold text-primary">Status</TableHead>
+                      <TableHead className="font-semibold text-primary">View</TableHead>
+                      <TableHead className="font-semibold text-primary">Reviewer</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {manuscripts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                           <div className="flex flex-col items-center gap-3">
                             <FileText className="w-12 h-12 text-muted-foreground/50" />
                             <span>No manuscripts submitted yet. Click "Submit New Manuscript" to get started.</span>
@@ -1182,26 +1148,21 @@ const ReviewerDashboard = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      manuscripts.map((manuscript) => (
+                      manuscripts.map((manuscript, index) => (
                         <TableRow key={manuscript.id}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {manuscript.id?.slice(0, 8)}...
+                          </TableCell>
                           <TableCell className="font-medium">
-                            <div className="max-w-[200px] sm:max-w-none truncate" title={manuscript.title}>
-                              {manuscript.title}
-                            </div>
+                            {manuscript.title}
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">
-                              {new Date(manuscript.submission_date).toLocaleDateString()}
-                            </div>
+                            {new Date(manuscript.submission_date).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
                             <Badge className={getManuscriptStatusColor(manuscript.status)}>
-                              <span className="hidden sm:inline">
-                                {manuscript.status.charAt(0).toUpperCase() + manuscript.status.slice(1)}
-                              </span>
-                              <span className="sm:hidden">
-                                {manuscript.status.split('_')[0]}
-                              </span>
+                              {manuscript.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1209,12 +1170,13 @@ const ReviewerDashboard = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => downloadFile(manuscript.file_path, manuscript.file_name)}
-                              className="w-full sm:w-auto"
                             >
-                              <Download className="mr-2 h-4 w-4" />
-                              <span className="hidden sm:inline">Download</span>
-                              <span className="sm:hidden">Get</span>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
                             </Button>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-muted-foreground">-</span>
                           </TableCell>
                         </TableRow>
                       ))

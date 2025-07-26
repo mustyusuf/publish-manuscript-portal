@@ -33,6 +33,7 @@ interface Manuscript {
   keywords?: string[];
   co_authors?: string[];
   admin_notes?: string;
+  author_id: string;
   author: {
     first_name: string;
     last_name: string;
@@ -177,6 +178,7 @@ const AdminDashboard = () => {
           keywords: m.keywords,
           co_authors: m.co_authors,
           admin_notes: m.admin_notes,
+          author_id: m.author_id,
           author: {
             first_name: author?.first_name || '',
             last_name: author?.last_name || '',
@@ -389,6 +391,22 @@ const AdminDashboard = () => {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // 2 weeks from now
 
+      // Get the manuscript to check author_id
+      const { data: manuscript } = await supabase
+        .from('manuscripts')
+        .select('author_id')
+        .eq('id', selectedManuscript)
+        .single();
+
+      if (!manuscript) {
+        toast({
+          title: "Error",
+          description: "Manuscript not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Check for existing assignments to prevent duplicates
       const { data: existingReviews } = await supabase
         .from('reviews')
@@ -396,12 +414,31 @@ const AdminDashboard = () => {
         .eq('manuscript_id', selectedManuscript);
 
       const existingReviewerIds = existingReviews?.map(r => r.reviewer_id) || [];
-      const newReviewers = selectedReviewers.filter(id => !existingReviewerIds.includes(id));
+      
+      // Filter out reviewers who are already assigned AND the author of the manuscript
+      const newReviewers = selectedReviewers.filter(id => 
+        !existingReviewerIds.includes(id) && id !== manuscript.author_id
+      );
+
+      // Check if any reviewers were filtered out due to being the author
+      const authorFilteredReviewers = selectedReviewers.filter(id => id === manuscript.author_id);
+      const alreadyAssignedReviewers = selectedReviewers.filter(id => 
+        existingReviewerIds.includes(id) && id !== manuscript.author_id
+      );
 
       if (newReviewers.length === 0) {
+        let message = "";
+        if (authorFilteredReviewers.length > 0 && alreadyAssignedReviewers.length > 0) {
+          message = "Cannot assign reviewers: some are already assigned and others are the manuscript author.";
+        } else if (authorFilteredReviewers.length > 0) {
+          message = "Cannot assign reviewer(s): they authored this manuscript.";
+        } else if (alreadyAssignedReviewers.length > 0) {
+          message = "All selected reviewers are already assigned to this manuscript.";
+        }
+        
         toast({
           title: "Warning",
-          description: "All selected reviewers are already assigned to this manuscript.",
+          description: message,
           variant: "destructive",
         });
         return;
@@ -928,36 +965,44 @@ const AdminDashboard = () => {
                                       No reviewers available. Add users with reviewer role first.
                                     </p>
                                   ) : (
-                                    reviewers.map((reviewer) => (
-                                      <div key={reviewer.id} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50">
-                                        <input
-                                          type="checkbox"
-                                          id={reviewer.id}
-                                          checked={selectedReviewers.includes(reviewer.id)}
-                                          onChange={(e) => {
-                                            if (e.target.checked) {
-                                              setSelectedReviewers([...selectedReviewers, reviewer.id]);
-                                            } else {
-                                              setSelectedReviewers(selectedReviewers.filter(id => id !== reviewer.id));
-                                            }
-                                          }}
-                                          className="mt-1 rounded border-gray-300"
-                                        />
-                                        <label htmlFor={reviewer.id} className="text-sm cursor-pointer flex-1">
-                                          <div className="font-medium">
-                                            {reviewer.first_name} {reviewer.last_name}
-                                          </div>
-                                          <div className="text-xs text-muted-foreground">
-                                            {reviewer.email}
-                                          </div>
-                                          {reviewer.expertise_areas?.length > 0 && (
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                              <span className="font-medium">Expertise:</span> {reviewer.expertise_areas.join(', ')}
-                                            </div>
-                                          )}
-                                        </label>
-                                      </div>
-                                    ))
+                                     reviewers.map((reviewer) => {
+                                       // Check if this reviewer is the author of the manuscript
+                                       const currentManuscript = manuscripts.find(m => m.id === selectedManuscript);
+                                       const isAuthor = currentManuscript && reviewer.id === currentManuscript.author_id;
+                                       
+                                       return (
+                                       <div key={reviewer.id} className={`flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50 ${isAuthor ? 'bg-red-50 border border-red-200' : ''}`}>
+                                         <input
+                                           type="checkbox"
+                                           id={reviewer.id}
+                                           checked={selectedReviewers.includes(reviewer.id)}
+                                           disabled={isAuthor}
+                                           onChange={(e) => {
+                                             if (e.target.checked) {
+                                               setSelectedReviewers([...selectedReviewers, reviewer.id]);
+                                             } else {
+                                               setSelectedReviewers(selectedReviewers.filter(id => id !== reviewer.id));
+                                             }
+                                           }}
+                                           className="mt-1 rounded border-gray-300"
+                                         />
+                                         <label htmlFor={reviewer.id} className={`text-sm cursor-pointer flex-1 ${isAuthor ? 'opacity-60' : ''}`}>
+                                           <div className={`font-medium ${isAuthor ? 'text-red-600' : ''}`}>
+                                             {reviewer.first_name} {reviewer.last_name}
+                                             {isAuthor && <span className="ml-2 text-xs font-normal">(Author - Cannot Review)</span>}
+                                           </div>
+                                           <div className="text-xs text-muted-foreground">
+                                             {reviewer.email}
+                                           </div>
+                                           {reviewer.expertise_areas?.length > 0 && (
+                                             <div className="text-xs text-muted-foreground mt-1">
+                                               <span className="font-medium">Expertise:</span> {reviewer.expertise_areas.join(', ')}
+                                             </div>
+                                           )}
+                                         </label>
+                                       </div>
+                                       );
+                                     })
                                   )}
                                 </div>
                               </div>

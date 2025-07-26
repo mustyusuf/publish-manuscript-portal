@@ -138,6 +138,8 @@ const AuthorDashboard = () => {
           cover_letter_path: coverLetterFileName,
           cover_letter_name: coverLetterFile.name,
           cover_letter_size: coverLetterFile.size,
+          keywords: [],
+          co_authors: []
         });
 
       if (insertError) throw insertError;
