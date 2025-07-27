@@ -115,6 +115,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       }
     });
+
+    // Send welcome email if signup was successful
+    if (!error) {
+      try {
+        await fetch('/functions/v1/send-welcome-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            firstName,
+            lastName,
+          }),
+        });
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+        // Don't fail the signup if email fails
+      }
+    }
+
     return { error };
   };
 

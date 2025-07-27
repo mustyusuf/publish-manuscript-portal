@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
@@ -64,6 +65,15 @@ const Auth = () => {
     if (error) {
       setError(error.message);
     } else {
+      // Show popup confirmation
+      toast.success('Account created successfully! Please check your email for verification.', {
+        duration: 5000,
+        style: {
+          background: '#10b981',
+          color: 'white',
+          border: 'none',
+        }
+      });
       setSuccess('Account created successfully! Please check your email for verification.');
     }
     
