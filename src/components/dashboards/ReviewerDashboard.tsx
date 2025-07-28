@@ -935,13 +935,12 @@ const ReviewerDashboard = () => {
                                              <SelectTrigger>
                                                <SelectValue placeholder="Select recommendation" />
                                              </SelectTrigger>
-                                             <SelectContent>
-                                               <SelectItem value="Reject">Reject</SelectItem>
-                                               <SelectItem value="Accept without correction">Accept without correction</SelectItem>
-                                               <SelectItem value="Accept subject to minor corrections">Accept subject to minor corrections</SelectItem>
-                                               <SelectItem value="Accept subject to major corrections">Accept subject to major corrections</SelectItem>
-                                               <SelectItem value="Published">Published</SelectItem>
-                                             </SelectContent>
+                                              <SelectContent>
+                                                <SelectItem value="Reject">Reject</SelectItem>
+                                                <SelectItem value="Accept without correction">Accept without correction</SelectItem>
+                                                <SelectItem value="Accept subject to minor corrections">Accept subject to minor corrections</SelectItem>
+                                                <SelectItem value="Accept subject to major corrections">Accept subject to major corrections</SelectItem>
+                                              </SelectContent>
                                            </Select>
                                          </div>
                                       
