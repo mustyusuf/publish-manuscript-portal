@@ -44,44 +44,31 @@ const AddUserDialog = ({ onUserAdded }: AddUserDialogProps) => {
     try {
       console.log('Creating user with data:', formData);
       
-      // Create user account
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: formData.firstName,
-          last_name: formData.lastName
+      // Call edge function to create user
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          institution: formData.institution,
+          role: formData.role
         }
       });
 
-      console.log('Auth result:', { authData, authError });
-      if (authError) {
-        console.error('Auth error details:', authError);
-        throw authError;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
       }
 
-      if (!authData.user) {
+      if (data?.error) {
+        console.error('User creation error:', data.error);
+        throw new Error(data.error);
+      }
+
+      if (!data?.success) {
         throw new Error('Failed to create user');
       }
-
-      // Update profile with additional info
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          institution: formData.institution || null
-        })
-        .eq('user_id', authData.user.id);
-
-      if (profileError) throw profileError;
-
-      // Assign role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .update({ role: formData.role })
-        .eq('user_id', authData.user.id);
-
-      if (roleError) throw roleError;
 
       toast({
         title: "Success",
