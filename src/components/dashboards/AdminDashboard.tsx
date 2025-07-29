@@ -391,10 +391,10 @@ const AdminDashboard = () => {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 14); // 2 weeks from now
 
-      // Get the manuscript to check author_id
+      // Get the manuscript to check author_id and file uploads
       const { data: manuscript } = await supabase
         .from('manuscripts')
-        .select('author_id')
+        .select('author_id, file_path, file_name')
         .eq('id', selectedManuscript)
         .single();
 
@@ -402,6 +402,16 @@ const AdminDashboard = () => {
         toast({
           title: "Error",
           description: "Manuscript not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if manuscript file is uploaded before allowing reviewer assignment
+      if (!manuscript.file_path || !manuscript.file_name) {
+        toast({
+          title: "File Required",
+          description: "Please upload the manuscript file before assigning reviewers.",
           variant: "destructive",
         });
         return;
