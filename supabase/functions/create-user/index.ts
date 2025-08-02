@@ -24,8 +24,34 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Get the request body
-    const { email, password, firstName, lastName, institution, role } = await req.json();
+    // Get the request body with validation
+    const body = await req.json();
+    const { email, password, firstName, lastName, institution, role } = body;
+
+    // Input validation
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      throw new Error('Valid email is required');
+    }
+    
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      throw new Error('Password must be at least 8 characters long');
+    }
+    
+    if (!firstName || typeof firstName !== 'string' || firstName.trim().length === 0) {
+      throw new Error('First name is required');
+    }
+    
+    if (!lastName || typeof lastName !== 'string' || lastName.trim().length === 0) {
+      throw new Error('Last name is required');
+    }
+    
+    if (!role || !['admin', 'author', 'reviewer'].includes(role)) {
+      throw new Error('Valid role is required (admin, author, or reviewer)');
+    }
+    
+    if (institution && typeof institution !== 'string') {
+      throw new Error('Institution must be a string');
+    }
 
     console.log('Creating user with email:', email);
 

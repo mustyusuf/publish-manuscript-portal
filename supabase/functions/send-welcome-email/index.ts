@@ -22,7 +22,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, firstName, lastName }: WelcomeEmailRequest = await req.json();
+    const body = await req.json();
+    const { email, firstName, lastName }: WelcomeEmailRequest = body;
+    
+    // Input validation
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      throw new Error('Valid email address is required');
+    }
+    
+    if (firstName && typeof firstName !== 'string') {
+      throw new Error('First name must be a string');
+    }
+    
+    if (lastName && typeof lastName !== 'string') {
+      throw new Error('Last name must be a string');
+    }
+    
     const name = firstName && lastName ? `${firstName} ${lastName}` : 'User';
 
     const emailResponse = await resend.emails.send({
@@ -42,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <!-- Header with Logo -->
             <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 40px 20px; text-align: center;">
-              <img src="https://lidbuempjyklxoutmwrv.supabase.co/storage/v1/object/public/email-assets/aipm-logo.png" alt="AIPM Logo" style="width: 80px; height: 80px; margin-bottom: 20px;">
+              <img src="${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/email-assets/aipm-logo.png" alt="AIPM Logo" style="width: 80px; height: 80px; margin-bottom: 20px;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Welcome to AIPM</h1>
               <p style="color: #f0fdf4; margin: 10px 0 0 0; font-size: 16px;">Annals of Ibadan Postgraduate Medicine</p>
             </div>
