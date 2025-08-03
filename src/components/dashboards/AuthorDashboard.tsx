@@ -126,7 +126,7 @@ const AuthorDashboard = () => {
       if (coverLetterUploadError) throw coverLetterUploadError;
 
       // Create manuscript record with auto-generated unique ID
-      const { error: insertError } = await supabase
+      const { data: insertedManuscript, error: insertError } = await supabase
         .from('manuscripts')
         .insert({
           title,
@@ -140,9 +140,36 @@ const AuthorDashboard = () => {
           cover_letter_size: coverLetterFile.size,
           keywords: [],
           co_authors: []
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
+
+      // Send notification to admins about the new manuscript submission
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('user_id', user.id)
+          .single();
+        
+        const authorName = profile?.first_name && profile?.last_name 
+          ? `${profile.first_name} ${profile.last_name}` 
+          : profile?.email || 'Unknown Author';
+
+        await supabase.functions.invoke('send-manuscript-notification', {
+          body: {
+            manuscriptId: insertedManuscript?.id || '',
+            authorName,
+            manuscriptTitle: title,
+            authorEmail: profile?.email || user.email || '',
+          }
+        });
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+        // Don't fail the submission if notification fails
+      }
 
       toast({
         title: "Success",

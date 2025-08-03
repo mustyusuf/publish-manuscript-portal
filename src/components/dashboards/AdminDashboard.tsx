@@ -394,7 +394,7 @@ const AdminDashboard = () => {
       // Get the manuscript to check author_id and file uploads
       const { data: manuscript } = await supabase
         .from('manuscripts')
-        .select('author_id, file_path, file_name')
+        .select('author_id, file_path, file_name, title')
         .eq('id', selectedManuscript)
         .single();
 
@@ -466,6 +466,25 @@ const AdminDashboard = () => {
         .insert(reviewInserts);
 
       if (error) throw error;
+
+      // Send notification emails to assigned reviewers
+      try {
+        const emailPromises = newReviewers.map(async (reviewerId) => {
+          await supabase.functions.invoke('send-reviewer-assignment-notification', {
+            body: {
+              manuscriptId: selectedManuscript,
+              manuscriptTitle: manuscript.title,
+              reviewerId,
+              dueDate: dueDate.toISOString(),
+            }
+          });
+        });
+        
+        await Promise.all(emailPromises);
+      } catch (notificationError) {
+        console.error('Error sending reviewer notifications:', notificationError);
+        // Don't fail the assignment if notification fails
+      }
 
       // Update manuscript status
       await supabase
