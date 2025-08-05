@@ -35,7 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("user_roles")
       .select(`
         user_id,
-        profiles!inner(email, first_name, last_name)
+        profiles(email, first_name, last_name)
       `)
       .eq("role", "admin");
 
