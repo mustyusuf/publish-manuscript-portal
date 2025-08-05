@@ -282,6 +282,33 @@ const ReviewerDashboard = () => {
 
       if (error) throw error;
 
+      // Send notification to admins about the review submission
+      try {
+        const currentAssignment = assignments.find(a => a.id === reviewId);
+        if (currentAssignment) {
+          const { data: reviewerProfile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('user_id', user?.id)
+            .single();
+          
+          const reviewerName = reviewerProfile?.first_name && reviewerProfile?.last_name 
+            ? `${reviewerProfile.first_name} ${reviewerProfile.last_name}` 
+            : 'Unknown Reviewer';
+
+          await supabase.functions.invoke('send-review-submitted-notification', {
+            body: {
+              reviewId,
+              manuscriptTitle: currentAssignment.manuscript.title,
+              reviewerName,
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending review notification:', notificationError);
+        // Don't fail the submission if notification fails
+      }
+
       toast({
         title: "Success",
         description: "Review submitted for admin approval!",

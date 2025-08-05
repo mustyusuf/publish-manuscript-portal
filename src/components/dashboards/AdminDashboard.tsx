@@ -517,6 +517,20 @@ const AdminDashboard = () => {
         if (!confirmed) return;
       }
 
+      // Get the old status and author info before updating
+      const { data: oldManuscript } = await supabase
+        .from('manuscripts')
+        .select('status, title, author_id')
+        .eq('id', manuscriptId)
+        .single();
+
+      // Get author profile separately
+      const { data: authorProfile } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('user_id', oldManuscript?.author_id)
+        .single();
+
       const { error } = await supabase
         .from('manuscripts')
         .update({ 
@@ -526,6 +540,29 @@ const AdminDashboard = () => {
         .eq('id', manuscriptId);
 
       if (error) throw error;
+
+      // Send status change notification to author
+      try {
+        if (oldManuscript && authorProfile && oldManuscript.status !== status) {
+          const authorName = authorProfile.first_name && authorProfile.last_name 
+            ? `${authorProfile.first_name} ${authorProfile.last_name}` 
+            : 'Author';
+
+          await supabase.functions.invoke('send-status-change-notification', {
+            body: {
+              authorEmail: authorProfile.email,
+              authorName,
+              manuscriptTitle: oldManuscript.title,
+              oldStatus: oldManuscript.status,
+              newStatus: status,
+              changeDate: new Date().toISOString(),
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending status change notification:', notificationError);
+        // Don't fail the update if notification fails
+      }
 
       toast({
         title: "Success",
@@ -671,6 +708,13 @@ const AdminDashboard = () => {
         })
       );
 
+      // Get manuscript and author info for notifications
+      const currentManuscript = manuscripts.find(m => m.id === manuscriptId);
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select('id')
+        .eq('manuscript_id', manuscriptId);
+
       // Call edge function to send email
       const { error } = await supabase.functions.invoke('send-final-documents', {
         body: {
@@ -680,6 +724,36 @@ const AdminDashboard = () => {
       });
 
       if (error) throw error;
+
+      // Send review feedback notification to author
+      try {
+        if (currentManuscript) {
+          const { data: authorProfile } = await supabase
+            .from('profiles')
+            .select('email, first_name, last_name')
+            .eq('user_id', currentManuscript.author_id)
+            .single();
+
+          if (authorProfile) {
+            const authorName = authorProfile.first_name && authorProfile.last_name 
+              ? `${authorProfile.first_name} ${authorProfile.last_name}` 
+              : 'Author';
+
+            await supabase.functions.invoke('send-review-feedback-notification', {
+              body: {
+                authorEmail: authorProfile.email,
+                authorName,
+                manuscriptTitle: currentManuscript.title,
+                reviewCount: reviews?.length || 0,
+                feedbackDate: new Date().toISOString(),
+              }
+            });
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error sending review feedback notification:', notificationError);
+        // Don't fail the document sending if notification fails
+      }
 
       toast({
         title: "Success",
