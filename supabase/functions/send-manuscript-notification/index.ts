@@ -25,6 +25,8 @@ const handler = async (req: Request): Promise<Response> => {
     const body = await req.json();
     const { manuscriptId, authorName, manuscriptTitle, authorEmail }: ManuscriptNotificationRequest = body;
 
+    console.log("Processing manuscript notification:", { manuscriptId, authorName, manuscriptTitle, authorEmail });
+
     // Input validation
     if (!manuscriptId || typeof manuscriptId !== 'string') {
       throw new Error('Manuscript ID is required');
@@ -48,33 +50,64 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    console.log("Getting admin users...");
+    
+    // Get admin users by first getting user_ids from user_roles
     const { data: adminUsers, error: adminError } = await supabase
-      .from('user_roles')
-      .select(`
-        user_id,
-        profiles!inner(email, first_name, last_name)
-      `)
-      .eq('role', 'admin');
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
 
     if (adminError) {
-      console.error('Error fetching admin users:', adminError);
-      throw new Error('Failed to fetch admin users');
+      console.error("Error fetching admin user roles:", adminError);
+      return new Response(JSON.stringify({ error: "Failed to fetch admin users" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
+    console.log("Admin users found:", adminUsers?.length || 0);
+
     if (!adminUsers || adminUsers.length === 0) {
-      console.log('No admin users found');
-      return new Response(JSON.stringify({ message: 'No admin users to notify' }), {
+      console.log("No admin users found");
+      return new Response(JSON.stringify({ message: "No admin users found" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Get admin profiles
+    const adminUserIds = adminUsers.map(user => user.user_id);
+    const { data: adminProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id, email, first_name, last_name")
+      .in("user_id", adminUserIds);
+
+    if (profileError) {
+      console.error("Error fetching admin profiles:", profileError);
+      return new Response(JSON.stringify({ error: "Failed to fetch admin profiles" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.log("No admin profiles found");
+      return new Response(JSON.stringify({ message: "No admin profiles found" }), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
     // Send email to all admins
-    const emailPromises = adminUsers.map(async (admin: any) => {
-      const adminEmail = admin.profiles.email;
-      const adminName = admin.profiles.first_name && admin.profiles.last_name 
-        ? `${admin.profiles.first_name} ${admin.profiles.last_name}` 
+    console.log("Sending emails to admin profiles:", adminProfiles.length);
+    const emailPromises = adminProfiles.map(async (adminProfile: any) => {
+      const adminEmail = adminProfile.email;
+      const adminName = adminProfile.first_name && adminProfile.last_name 
+        ? `${adminProfile.first_name} ${adminProfile.last_name}` 
         : 'Admin';
+
+      console.log("Sending email to:", adminEmail);
 
       return resend.emails.send({
         from: "AIPM System <onboarding@resend.dev>",
@@ -139,9 +172,11 @@ const handler = async (req: Request): Promise<Response> => {
       });
     });
 
-    await Promise.all(emailPromises);
+    const emailResults = await Promise.allSettled(emailPromises);
+    const successCount = emailResults.filter(result => result.status === 'fulfilled').length;
+    const failureCount = emailResults.filter(result => result.status === 'rejected').length;
 
-    console.log(`Manuscript submission notification sent to ${adminUsers.length} admins`);
+    console.log(`Manuscript submission notification sent: ${successCount} successful, ${failureCount} failed`);
 
     return new Response(JSON.stringify({ message: 'Notifications sent successfully' }), {
       status: 200,

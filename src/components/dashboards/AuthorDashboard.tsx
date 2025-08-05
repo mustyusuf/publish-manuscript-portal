@@ -148,6 +148,8 @@ const AuthorDashboard = () => {
 
       // Send notifications about the new manuscript submission
       try {
+        console.log('Starting notification process for manuscript submission');
+        
         const { data: profile } = await supabase
           .from('profiles')
           .select('first_name, last_name, email')
@@ -158,8 +160,11 @@ const AuthorDashboard = () => {
           ? `${profile.first_name} ${profile.last_name}` 
           : profile?.email || 'Unknown Author';
 
+        console.log('Author profile retrieved:', { authorName, email: profile?.email });
+
         // Send notification to admins
-        await supabase.functions.invoke('send-manuscript-notification', {
+        console.log('Sending admin notification...');
+        const adminNotificationResult = await supabase.functions.invoke('send-manuscript-notification', {
           body: {
             manuscriptId: insertedManuscript?.id || '',
             authorName,
@@ -167,9 +172,11 @@ const AuthorDashboard = () => {
             authorEmail: profile?.email || user.email || '',
           }
         });
+        console.log('Admin notification result:', adminNotificationResult);
 
         // Send confirmation to author
-        await supabase.functions.invoke('send-author-submission-confirmation', {
+        console.log('Sending author confirmation...');
+        const authorConfirmationResult = await supabase.functions.invoke('send-author-submission-confirmation', {
           body: {
             authorEmail: profile?.email || user.email || '',
             authorName,
@@ -177,6 +184,7 @@ const AuthorDashboard = () => {
             submissionDate: new Date().toISOString(),
           }
         });
+        console.log('Author confirmation result:', authorConfirmationResult);
       } catch (notificationError) {
         console.error('Error sending notifications:', notificationError);
         // Don't fail the submission if notification fails
