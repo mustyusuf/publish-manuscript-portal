@@ -16,7 +16,14 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const [expertiseInput, setExpertiseInput] = useState('');
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -120,6 +127,58 @@ const UserProfile = () => {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Password changed successfully.",
+      });
+
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setPasswordDialogOpen(false);
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast({
+        title: "Error",
+        description: "Failed to change password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const getRoleDescription = (role: string) => {
     switch (role) {
       case 'admin':
@@ -216,35 +275,101 @@ const UserProfile = () => {
                 <Button onClick={() => setIsEditing(true)} className="flex-1">
                   Edit Profile
                 </Button>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="flex-1">
-                      <Lock className="h-4 w-4 mr-2" />
-                      Reset Password
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Reset Password</DialogTitle>
-                      <DialogDescription>
-                        We'll send a password reset link to your email address.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
-                        <p className="text-sm">{user?.email}</p>
-                      </div>
-                      <Button
-                        onClick={handlePasswordReset}
-                        disabled={resettingPassword}
-                        className="w-full"
-                      >
-                        {resettingPassword ? 'Sending...' : 'Send Reset Email'}
+                <div className="flex gap-2 flex-1">
+                  <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="flex-1">
+                        <Lock className="h-4 w-4 mr-2" />
+                        Change Password
                       </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Change Password</DialogTitle>
+                        <DialogDescription>
+                          Enter your new password below.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleChangePassword} className="space-y-4">
+                        <div>
+                          <Label htmlFor="newPassword">New Password</Label>
+                          <Input
+                            id="newPassword"
+                            type="password"
+                            value={passwordData.newPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                            placeholder="Enter new password"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                          <Input
+                            id="confirmPassword"
+                            type="password"
+                            value={passwordData.confirmPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                            placeholder="Confirm new password"
+                            required
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="submit"
+                            disabled={changingPassword}
+                            className="flex-1"
+                          >
+                            {changingPassword ? 'Changing...' : 'Change Password'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setPasswordDialogOpen(false);
+                              setPasswordData({
+                                currentPassword: '',
+                                newPassword: '',
+                                confirmPassword: '',
+                              });
+                            }}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="flex-1">
+                        <Lock className="h-4 w-4 mr-2" />
+                        Reset Password
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                          We'll send a password reset link to your email address.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium text-muted-foreground">Email Address</Label>
+                          <p className="text-sm">{user?.email}</p>
+                        </div>
+                        <Button
+                          onClick={handlePasswordReset}
+                          disabled={resettingPassword}
+                          className="w-full"
+                        >
+                          {resettingPassword ? 'Sending...' : 'Send Reset Email'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </div>
           ) : (
