@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Header = () => {
@@ -26,6 +26,12 @@ const Header = () => {
           
           {user && (
             <div className="flex items-center space-x-4">
+              <Link to="/user-manual">
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <BookOpen className="w-4 h-4" />
+                  <span className="hidden sm:inline">User Manual</span>
+                </Button>
+              </Link>
               <div className="hidden md:flex items-center space-x-2">
                 <User className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm font-medium">{user.email}</span>

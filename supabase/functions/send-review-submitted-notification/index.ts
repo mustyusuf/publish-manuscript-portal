@@ -30,17 +30,14 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get admin users
+    // Get admin users by joining user_roles and profiles tables
     const { data: adminUsers, error: adminError } = await supabase
       .from("user_roles")
-      .select(`
-        user_id,
-        profiles(email, first_name, last_name)
-      `)
+      .select("user_id")
       .eq("role", "admin");
 
     if (adminError) {
-      console.error("Error fetching admin users:", adminError);
+      console.error("Error fetching admin user roles:", adminError);
       return new Response(JSON.stringify({ error: "Failed to fetch admin users" }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -55,9 +52,31 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Get admin profiles
+    const adminUserIds = adminUsers.map(user => user.user_id);
+    const { data: adminProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id, email, first_name, last_name")
+      .in("user_id", adminUserIds);
+
+    if (profileError) {
+      console.error("Error fetching admin profiles:", profileError);
+      return new Response(JSON.stringify({ error: "Failed to fetch admin profiles" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!adminProfiles || adminProfiles.length === 0) {
+      console.log("No admin profiles found");
+      return new Response(JSON.stringify({ message: "No admin profiles found" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     // Send email to each admin
-    const emailPromises = adminUsers.map(async (admin: any) => {
-      const adminProfile = admin.profiles;
+    const emailPromises = adminProfiles.map(async (adminProfile: any) => {
       
       return await resend.emails.send({
         from: "AIPM System <onboarding@resend.dev>",
