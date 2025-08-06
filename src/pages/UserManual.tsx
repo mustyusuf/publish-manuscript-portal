@@ -6,40 +6,111 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, FileText, Users, Settings, Upload, Eye, MessageSquare, Download } from 'lucide-react';
 import { saveAs } from 'file-saver';
-import HTMLtoDOCX from 'html-docx-js/dist/html-docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 
 const UserManual = () => {
   const { userRole } = useAuth();
 
-  const downloadManual = (role: string, content: string) => {
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${role.charAt(0).toUpperCase() + role.slice(1)} User Manual - AIPM System</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-            h1 { color: #1e40af; border-bottom: 3px solid #1e40af; padding-bottom: 10px; }
-            h2 { color: #1e40af; margin-top: 30px; }
-            h3 { color: #374151; margin-top: 20px; }
-            .step-card { margin: 20px 0; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; }
-            .step-title { font-weight: bold; color: #1e40af; margin-bottom: 10px; }
-            .step-description { color: #6b7280; margin-bottom: 15px; }
-            ul { padding-left: 20px; }
-            li { margin: 5px 0; }
-            .guidelines { background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .guidelines h3 { margin-top: 0; color: #dc2626; }
-          </style>
-        </head>
-        <body>
-          ${content}
-        </body>
-      </html>
-    `;
-    
-    const docx = HTMLtoDOCX(htmlContent);
-    const blob = new Blob([docx], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const downloadManual = async (role: string, content: string) => {
+    // Convert role-specific content to Word document format
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({
+            text: `AIPM System - ${role.charAt(0).toUpperCase() + role.slice(1)} User Manual`,
+            heading: HeadingLevel.TITLE,
+          }),
+          new Paragraph({
+            text: `Complete guide for ${role} functionality`,
+            spacing: { after: 400 },
+          }),
+          ...generateDocxContent(role)
+        ],
+      }],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+    });
     saveAs(blob, `${role}-user-manual-aipm.docx`);
+  };
+
+  const generateDocxContent = (role: string) => {
+    const content = [];
+    
+    if (role === 'author') {
+      content.push(
+        new Paragraph({ text: '1. Manuscript Submission', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: 'How to submit your research manuscript:', spacing: { after: 200 } }),
+        new Paragraph({ text: '• Navigate to your Author Dashboard' }),
+        new Paragraph({ text: '• Click "Submit New Manuscript" button' }),
+        new Paragraph({ text: '• Fill in manuscript title and abstract' }),
+        new Paragraph({ text: '• Upload your manuscript file (PDF, DOC, DOCX)' }),
+        new Paragraph({ text: '• Select relevant keywords and categories' }),
+        new Paragraph({ text: '• Review submission details' }),
+        new Paragraph({ text: '• Click "Submit" to send for review' }),
+        new Paragraph({ text: '• You\'ll receive a confirmation email', spacing: { after: 400 } }),
+        
+        new Paragraph({ text: '2. Track Manuscript Status', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: 'Monitor your submission progress:', spacing: { after: 200 } }),
+        new Paragraph({ text: '• Check your dashboard for status updates' }),
+        new Paragraph({ text: '• Status progression: Submitted → Under Review → Decision' }),
+        new Paragraph({ text: '• Receive email notifications for status changes' }),
+        new Paragraph({ text: '• View detailed feedback when available' }),
+        new Paragraph({ text: '• Download reviewer comments and suggestions', spacing: { after: 400 } }),
+        
+        new Paragraph({ text: 'Important Guidelines', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '• Ensure manuscript follows journal formatting guidelines' }),
+        new Paragraph({ text: '• Respond to revision requests within specified deadlines' }),
+        new Paragraph({ text: '• Keep your contact information updated' }),
+        new Paragraph({ text: '• Check your email regularly for notifications' })
+      );
+    } else if (role === 'reviewer') {
+      content.push(
+        new Paragraph({ text: '1. Accept Review Assignments', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: 'Manage your review invitations:', spacing: { after: 200 } }),
+        new Paragraph({ text: '• Check your Reviewer Dashboard regularly' }),
+        new Paragraph({ text: '• Review assignment notifications in email' }),
+        new Paragraph({ text: '• Evaluate manuscript topic relevance to expertise' }),
+        new Paragraph({ text: '• Accept or decline assignments promptly', spacing: { after: 400 } }),
+        
+        new Paragraph({ text: '2. Conduct Manuscript Review', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: 'Thoroughly evaluate submitted work:', spacing: { after: 200 } }),
+        new Paragraph({ text: '• Download manuscript and related files' }),
+        new Paragraph({ text: '• Read abstract and full paper carefully' }),
+        new Paragraph({ text: '• Evaluate methodology and analysis' }),
+        new Paragraph({ text: '• Prepare detailed feedback comments', spacing: { after: 400 } }),
+        
+        new Paragraph({ text: 'Review Quality Standards', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '• Maintain confidentiality of manuscript content' }),
+        new Paragraph({ text: '• Provide constructive and respectful feedback' }),
+        new Paragraph({ text: '• Meet all review deadlines promptly' })
+      );
+    } else if (role === 'admin') {
+      content.push(
+        new Paragraph({ text: '1. User Management', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: 'Manage system users and roles:', spacing: { after: 200 } }),
+        new Paragraph({ text: '• Access Admin Dashboard for user overview' }),
+        new Paragraph({ text: '• Add new users with appropriate roles' }),
+        new Paragraph({ text: '• Assign roles: Author, Reviewer, Admin' }),
+        new Paragraph({ text: '• Monitor user activity and engagement', spacing: { after: 400 } }),
+        
+        new Paragraph({ text: '2. Manuscript Management', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: 'Oversee submission workflow:', spacing: { after: 200 } }),
+        new Paragraph({ text: '• Monitor new manuscript submissions' }),
+        new Paragraph({ text: '• Assign manuscripts to appropriate reviewers' }),
+        new Paragraph({ text: '• Track review progress and deadlines' }),
+        new Paragraph({ text: '• Handle special cases and exceptions', spacing: { after: 400 } }),
+        
+        new Paragraph({ text: 'Critical Responsibilities', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '• Ensure fair and unbiased review process' }),
+        new Paragraph({ text: '• Maintain confidentiality of all submissions' }),
+        new Paragraph({ text: '• Respond to urgent issues within 24 hours' })
+      );
+    }
+    
+    return content;
   };
 
   const generateAuthorManualContent = () => `
