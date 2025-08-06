@@ -49,7 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     const emailResponse = await resend.emails.send({
-      from: "AIPM System <onboarding@resend.dev>",
+      from: "AIPM System <noreply@aipmed.org>",
       to: [authorEmail],
       subject: `Manuscript Status Update: "${manuscriptTitle}"`,
       html: `

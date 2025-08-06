@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email to reviewer
     const emailResponse = await resend.emails.send({
-      from: "AIPM System <onboarding@resend.dev>",
+      from: "AIPM System <noreply@aipmed.org>",
       to: [reviewer.email],
       subject: `Manuscript Review Assignment: ${manuscriptTitle}`,
       html: `

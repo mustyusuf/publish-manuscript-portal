@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailPromises = adminProfiles.map(async (adminProfile: any) => {
       
       return await resend.emails.send({
-        from: "AIPM System <onboarding@resend.dev>",
+        from: "AIPM System <noreply@aipmed.org>",
         to: [adminProfile.email],
         subject: `Review Submitted for "${manuscriptTitle}"`,
         html: `

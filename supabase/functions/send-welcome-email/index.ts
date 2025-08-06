@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     const name = firstName && lastName ? `${firstName} ${lastName}` : 'User';
 
     const emailResponse = await resend.emails.send({
-      from: "AIP.Med <onboarding@resend.dev>",
+      from: "AIP.Med <noreply@aipmed.org>",
       to: [email],
       subject: "Welcome to AIPM Manuscript Portal - Please Verify Your Email",
       html: `

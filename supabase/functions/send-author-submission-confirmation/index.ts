@@ -26,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Processing author submission confirmation:", { authorEmail, authorName, manuscriptTitle });
 
     const emailResponse = await resend.emails.send({
-      from: "AIPM System <onboarding@resend.dev>",
+      from: "AIPM System <noreply@aipmed.org>",
       to: [authorEmail],
       subject: `Manuscript Submission Confirmed: "${manuscriptTitle}"`,
       html: `

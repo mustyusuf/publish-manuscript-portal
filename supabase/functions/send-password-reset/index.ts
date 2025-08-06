@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, resetLink }: PasswordResetRequest = await req.json();
 
     const emailResponse = await resend.emails.send({
-      from: "AIP.Med <noreply@aipm.org>",
+      from: "AIP.Med <noreply@aipmed.org>",
       to: [email],
       subject: "Reset Your AIPM Password",
       html: `

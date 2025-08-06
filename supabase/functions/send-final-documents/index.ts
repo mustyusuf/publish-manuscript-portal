@@ -105,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: "Editorial Team <editorial@resend.dev>",
+      from: "Editorial Team <noreply@aipmed.org>",
       to: [authorEmail],
       subject: `Final Documents Ready - ${manuscript.title}`,
       html: emailHtml,

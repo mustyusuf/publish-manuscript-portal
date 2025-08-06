@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Sending email to:", adminEmail);
 
       return resend.emails.send({
-        from: "AIPM System <onboarding@resend.dev>",
+        from: "AIPM System <noreply@aipmed.org>",
         to: [adminEmail],
         subject: `New Manuscript Submission: ${manuscriptTitle}`,
         html: `

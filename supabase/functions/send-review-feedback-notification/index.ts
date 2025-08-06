@@ -27,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Processing review feedback notification:", { authorEmail, authorName, manuscriptTitle, reviewCount });
 
     const emailResponse = await resend.emails.send({
-      from: "AIPM System <onboarding@resend.dev>",
+      from: "AIPM System <noreply@aipmed.org>",
       to: [authorEmail],
       subject: `Reviews Available for "${manuscriptTitle}"`,
       html: `
