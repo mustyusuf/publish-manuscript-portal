@@ -141,6 +141,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    window.location.href = 'https://aipmedportal.vercel.app/';
   };
 
   const value = {
