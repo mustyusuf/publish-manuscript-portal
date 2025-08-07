@@ -78,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
           <p>Please log in to the AIPM system to view detailed information about your manuscript and any available reviews or feedback.</p>
           
           <div style="margin: 30px 0;">
-            <a href="https://lidbuempjyklxoutmwrv.supabase.co" 
+            <a href="https://lidbuempjyklxoutmwrv.lovableproject.com" 
                style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
               Access AIPM System
             </a>
