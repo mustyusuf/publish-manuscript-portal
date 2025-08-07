@@ -60,9 +60,9 @@ const handler = async (req: Request): Promise<Response> => {
           <p>Please log in to the AIPM system to access the reviews and any additional feedback from the editorial team.</p>
           
           <div style="margin: 30px 0;">
-            <a href="https://aipmedportal.vercel.app/" 
+            <a href="https://aipmedportal.vercel.app/dashboard" 
                style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Access AIPM System
+              Access AIPM Dashboard
             </a>
           </div>
           

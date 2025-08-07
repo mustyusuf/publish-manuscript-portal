@@ -113,9 +113,9 @@ const handler = async (req: Request): Promise<Response> => {
                 </p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://aipmedportal.vercel.app/" 
+                  <a href="https://aipmedportal.vercel.app/dashboard" 
                      style="background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: bold; display: inline-block;">
-                    Access Manuscript
+                    Access Dashboard
                   </a>
                 </div>
                 
