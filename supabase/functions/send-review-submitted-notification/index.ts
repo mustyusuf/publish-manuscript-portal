@@ -101,7 +101,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p>Please log in to the AIPM system to review the submission and take appropriate action.</p>
             
             <div style="margin: 30px 0;">
-              <a href="https://lidbuempjyklxoutmwrv.lovableproject.com" 
+              <a href="https://aipmed-portal.lovable.app/dashboard" 
                  style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 Access AIPM System
               </a>
