@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { saveAs } from 'file-saver';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,9 @@ const UserProfile = () => {
     expertise_areas: [] as string[],
   });
   const { toast } = useToast();
+  const [fromDateTime, setFromDateTime] = useState<string>("");
+  const [toDateTime, setToDateTime] = useState<string>("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -195,6 +199,110 @@ const UserProfile = () => {
   if (!user || !profile) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
+
+  const exportAuditLogs = async () => {
+    try {
+      setExporting(true);
+      // Fetch manuscripts within range
+      const { data: manuscripts } = await supabase
+        .from('manuscripts')
+        .select('id, title, submission_date, author_id')
+        .order('submission_date', { ascending: false });
+
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select('id, manuscript_id, reviewer_id, completed_date, status')
+        .order('completed_date', { ascending: false });
+
+      const { data: finalDocs } = await supabase
+        .from('final_documents')
+        .select('id, manuscript_id, uploaded_by, upload_date, file_name')
+        .order('upload_date', { ascending: false });
+
+      // Collect user ids to map emails
+      const userIds = new Set<string>();
+      (manuscripts || []).forEach(m => userIds.add(m.author_id));
+      (reviews || []).forEach(r => r.reviewer_id && userIds.add(r.reviewer_id));
+      (finalDocs || []).forEach(d => userIds.add(d.uploaded_by));
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, email, first_name, last_name')
+        .in('user_id', Array.from(userIds));
+      const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+
+      const inRange = (iso?: string | null) => {
+        if (!iso) return false;
+        const t = new Date(iso).getTime();
+        const fromOk = fromDateTime ? t >= new Date(fromDateTime).getTime() : true;
+        const toOk = toDateTime ? t <= new Date(toDateTime).getTime() : true;
+        return fromOk && toOk;
+      };
+
+      type Row = { timestamp: string; event_type: string; actor_email: string; actor_name: string; target_type: string; target_id: string; title: string };
+      const rows: Row[] = [];
+
+      (manuscripts || []).forEach(m => {
+        if (!fromDateTime && !toDateTime || inRange(m.submission_date)) {
+          const author = profileMap.get(m.author_id);
+          rows.push({
+            timestamp: m.submission_date,
+            event_type: 'manuscript_submitted',
+            actor_email: author?.email || '',
+            actor_name: author ? `${author.first_name} ${author.last_name}` : '',
+            target_type: 'manuscript',
+            target_id: m.id,
+            title: m.title,
+          });
+        }
+      });
+
+      (reviews || []).forEach(r => {
+        if (r.completed_date && ( !fromDateTime && !toDateTime || inRange(r.completed_date))) {
+          const reviewer = r.reviewer_id ? profileMap.get(r.reviewer_id) : undefined;
+          rows.push({
+            timestamp: r.completed_date!,
+            event_type: 'review_submitted',
+            actor_email: reviewer?.email || '',
+            actor_name: reviewer ? `${reviewer.first_name} ${reviewer.last_name}` : '',
+            target_type: 'review',
+            target_id: r.id,
+            title: r.manuscript_id,
+          });
+        }
+      });
+
+      (finalDocs || []).forEach(d => {
+        if (!fromDateTime && !toDateTime || inRange(d.upload_date)) {
+          const uploader = profileMap.get(d.uploaded_by);
+          rows.push({
+            timestamp: d.upload_date,
+            event_type: 'final_document_uploaded',
+            actor_email: uploader?.email || '',
+            actor_name: uploader ? `${uploader.first_name} ${uploader.last_name}` : '',
+            target_type: 'final_document',
+            target_id: d.id,
+            title: d.file_name,
+          });
+        }
+      });
+
+      // Sort by time desc
+      rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      const headers = ['timestamp','event_type','actor_email','actor_name','target_type','target_id','title'];
+      const csv = [headers.join(','), ...rows.map(r => headers.map(h => JSON.stringify((r as any)[h] ?? '')).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const filename = `audit_export_${new Date().toISOString().slice(0,10)}.csv`;
+      saveAs(blob, filename);
+      toast({ title: 'Exported', description: `Saved ${rows.length} log entries.` });
+    } catch (e) {
+      console.error('Export error', e);
+      toast({ title: 'Error', description: 'Failed to export logs', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

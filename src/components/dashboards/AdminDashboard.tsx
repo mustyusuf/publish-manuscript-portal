@@ -98,6 +98,10 @@ const AdminDashboard = () => {
   const [manuscriptToDelete, setManuscriptToDelete] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchField, setSearchField] = useState<'all' | 'id' | 'title' | 'author'>("all");
+  const [fromDateTime, setFromDateTime] = useState<string>("");
+  const [toDateTime, setToDateTime] = useState<string>("");
 
   useEffect(() => {
     fetchData();
@@ -1002,11 +1006,64 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {manuscripts.map((manuscript) => (
-                  <div
-                    key={manuscript.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="flex gap-2 md:col-span-2">
+                    <Input
+                      placeholder="Search by ID, Title, or Author"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <Select value={searchField} onValueChange={(v) => setSearchField(v as any)}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Field" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="id">ID</SelectItem>
+                        <SelectItem value="title">Title</SelectItem>
+                        <SelectItem value="author">Author</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    type="datetime-local"
+                    value={fromDateTime}
+                    onChange={(e) => setFromDateTime(e.target.value)}
+                    aria-label="From date-time"
+                  />
+                  <Input
+                    type="datetime-local"
+                    value={toDateTime}
+                    onChange={(e) => setToDateTime(e.target.value)}
+                    aria-label="To date-time"
+                  />
+                </div>
+
+                {manuscripts
+                  .filter((m) => {
+                    const q = searchQuery.trim().toLowerCase();
+                    const textMatch = q
+                      ? (searchField === 'id'
+                          ? m.id.toLowerCase().includes(q)
+                          : searchField === 'title'
+                          ? m.title.toLowerCase().includes(q)
+                          : searchField === 'author'
+                          ? `${m.author.first_name} ${m.author.last_name}`.toLowerCase().includes(q)
+                          : [m.id, m.title, `${m.author.first_name} ${m.author.last_name}`]
+                              .filter(Boolean)
+                              .some((v) => v.toLowerCase().includes(q)))
+                      : true;
+
+                    const ts = new Date(m.submission_date).getTime();
+                    const fromOk = fromDateTime ? ts >= new Date(fromDateTime).getTime() : true;
+                    const toOk = toDateTime ? ts <= new Date(toDateTime).getTime() : true;
+                    return textMatch && fromOk && toOk;
+                  })
+                  .map((manuscript) => (
+                    <div
+                      key={manuscript.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
                     <div className="flex-1">
                       <h3 className="font-medium">{manuscript.title}</h3>
                       <p className="text-sm text-muted-foreground">

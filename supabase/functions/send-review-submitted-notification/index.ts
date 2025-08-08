@@ -52,12 +52,21 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Get admin profiles
+    // Get admin profiles, excluding any users who are super admins
     const adminUserIds = adminUsers.map(user => user.user_id);
+
+    const { data: superAdmins } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "super_admin");
+    const superAdminIds = new Set((superAdmins || []).map(u => u.user_id));
+
+    const filteredAdminIds = adminUserIds.filter(id => !superAdminIds.has(id));
+
     const { data: adminProfiles, error: profileError } = await supabase
       .from("profiles")
       .select("user_id, email, first_name, last_name")
-      .in("user_id", adminUserIds);
+      .in("user_id", filteredAdminIds);
 
     if (profileError) {
       console.error("Error fetching admin profiles:", profileError);
