@@ -367,6 +367,29 @@ const UserProfile = () => {
                 </div>
               )}
               
+              {(userRole === 'admin' || userRole === 'super_admin') && (
+                <div className="mt-4 border rounded-lg p-4 space-y-3">
+                  <Label className="text-sm font-medium">Admin Tools • Export Audit Logs</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Input
+                      type="datetime-local"
+                      value={fromDateTime}
+                      onChange={(e) => setFromDateTime(e.target.value)}
+                      aria-label="From date-time"
+                    />
+                    <Input
+                      type="datetime-local"
+                      value={toDateTime}
+                      onChange={(e) => setToDateTime(e.target.value)}
+                      aria-label="To date-time"
+                    />
+                    <Button onClick={exportAuditLogs} disabled={exporting}>
+                      {exporting ? 'Exporting...' : 'Export CSV'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Exports submissions, review submissions, and final document uploads within range.</p>
+                </div>
+              )}
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Role</Label>
                 <div className="flex items-center gap-2 mt-1">
