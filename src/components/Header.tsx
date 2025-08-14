@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Header = () => {
@@ -30,9 +30,10 @@ const Header = () => {
                 variant="outline"
                 size="sm"
                 asChild
-                className="hidden sm:flex items-center space-x-2 hover:bg-primary/10"
+                className="hidden sm:flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white border-green-600 hover:border-green-700"
               >
                 <a href="https://aipmed.org/" target="_blank" rel="noopener noreferrer">
+                  <ArrowLeft className="w-4 h-4" />
                   <span>Return to Website</span>
                 </a>
               </Button>
