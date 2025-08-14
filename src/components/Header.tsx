@@ -26,6 +26,16 @@ const Header = () => {
           
           {user && (
             <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="hidden sm:flex items-center space-x-2 hover:bg-primary/10"
+              >
+                <a href="https://aipmed.org/" target="_blank" rel="noopener noreferrer">
+                  <span>Return to Website</span>
+                </a>
+              </Button>
               <div className="hidden md:flex items-center space-x-2">
                 <User className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm font-medium">{user.email}</span>

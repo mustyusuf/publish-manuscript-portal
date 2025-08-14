@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send, Trash2, MoreVertical, Edit } from 'lucide-react';
+import { FileText, Users, Clock, CheckCircle, XCircle, Eye, UserPlus, Settings, Download, Upload, Send, Trash2, MoreVertical, Edit, CalendarIcon } from 'lucide-react';
 import UserManagement from '@/components/UserManagement';
 import UserProfile from '@/components/UserProfile';
 import FileUpload from '@/components/FileUpload';
@@ -17,6 +17,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface Manuscript {
   id: string;
@@ -84,6 +88,7 @@ const AdminDashboard = () => {
   });
   const [selectedManuscript, setSelectedManuscript] = useState<string>('');
   const [selectedReviewers, setSelectedReviewers] = useState<string[]>([]);
+  const [reviewDueDate, setReviewDueDate] = useState<Date>();
   const [reviewDocuments, setReviewDocuments] = useState<{[key: string]: any[]}>({});
   const [finalDocuments, setFinalDocuments] = useState<{[key: string]: any[]}>({});
   const [viewingManuscript, setViewingManuscript] = useState<Manuscript | null>(null);
@@ -389,11 +394,10 @@ const AdminDashboard = () => {
   };
 
   const assignReviewers = async () => {
-    if (!selectedManuscript || selectedReviewers.length === 0) return;
+    if (!selectedManuscript || selectedReviewers.length === 0 || !reviewDueDate) return;
 
     try {
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 14); // 2 weeks from now
+      const dueDate = reviewDueDate;
 
       // Get the manuscript to check author_id and file uploads
       const { data: manuscript } = await supabase
@@ -503,6 +507,7 @@ const AdminDashboard = () => {
 
       setSelectedManuscript('');
       setSelectedReviewers([]);
+      setReviewDueDate(undefined);
       fetchData();
     } catch (error) {
       console.error('Error assigning reviewers:', error);
@@ -1102,10 +1107,14 @@ const AdminDashboard = () => {
                       {manuscript.status === 'submitted' && (
                         <Dialog>
                           <DialogTrigger asChild>
-                           <Button size="sm" onClick={() => {
-                              setSelectedManuscript(manuscript.id);
-                              setSelectedReviewers([]);
-                            }}>
+                            <Button size="sm" onClick={() => {
+                               setSelectedManuscript(manuscript.id);
+                               setSelectedReviewers([]);
+                               // Set default due date to 2 weeks from now
+                               const defaultDate = new Date();
+                               defaultDate.setDate(defaultDate.getDate() + 14);
+                               setReviewDueDate(defaultDate);
+                             }}>
                               <UserPlus className="h-4 w-4 mr-1" />
                               Assign Reviewers
                             </Button>
@@ -1167,6 +1176,38 @@ const AdminDashboard = () => {
                                 </div>
                               </div>
                               
+                              <div>
+                                <label className="text-sm font-medium mb-2 block">
+                                  Review Due Date
+                                </label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !reviewDueDate && "text-muted-foreground"
+                                      )}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {reviewDueDate ? format(reviewDueDate, "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                      mode="single"
+                                      selected={reviewDueDate}
+                                      onSelect={setReviewDueDate}
+                                      disabled={(date) =>
+                                        date < new Date() || date < new Date("1900-01-01")
+                                      }
+                                      initialFocus
+                                      className="pointer-events-auto"
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+
                               <FileUpload
                                 bucketName="manuscripts"
                                 folderPath={`review-documents/${manuscript.id}`}
@@ -1179,7 +1220,7 @@ const AdminDashboard = () => {
                                 <Button 
                                   onClick={assignReviewers} 
                                   className="flex-1"
-                                  disabled={selectedReviewers.length === 0}
+                                  disabled={selectedReviewers.length === 0 || !reviewDueDate}
                                 >
                                   Assign {selectedReviewers.length} Reviewer(s)
                                 </Button>
@@ -1188,6 +1229,7 @@ const AdminDashboard = () => {
                                   onClick={() => {
                                     setSelectedManuscript('');
                                     setSelectedReviewers([]);
+                                    setReviewDueDate(undefined);
                                   }}
                                   className="flex-1"
                                 >
