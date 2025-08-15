@@ -84,23 +84,68 @@ const ReviewManagement = () => {
 
       if (manuscriptsError) throw manuscriptsError;
 
-      // Fetch authors
+      // Get author and reviewer IDs
       const authorIds = manuscriptsData?.map(m => m.author_id) || [];
-      const { data: authorsData, error: authorsError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name')
-        .in('user_id', authorIds);
-
-      if (authorsError) throw authorsError;
-
-      // Fetch reviewers
       const reviewerIds = reviewsData?.map(r => r.reviewer_id) || [];
-      const { data: reviewersData, error: reviewersProfileError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name, email')
-        .in('user_id', reviewerIds);
 
-      if (reviewersProfileError) throw reviewersProfileError;
+      // Fetch authors - try direct query first (works for admins), fallback to restricted access
+      let authorsData;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name')
+          .in('user_id', authorIds);
+        
+        if (error && error.message.includes('policy')) {
+          // If policy blocks access, create minimal data from available info
+          authorsData = authorIds.map(id => ({ 
+            user_id: id, 
+            first_name: 'Author', 
+            last_name: `(${id.slice(0, 8)})` 
+          }));
+        } else if (error) {
+          throw error;
+        } else {
+          authorsData = data;
+        }
+      } catch (error) {
+        console.error('Error fetching authors:', error);
+        authorsData = authorIds.map(id => ({ 
+          user_id: id, 
+          first_name: 'Author', 
+          last_name: `(${id.slice(0, 8)})` 
+        }));
+      }
+
+      // Fetch reviewers - should work for admins
+      let reviewersData;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name, email')
+          .in('user_id', reviewerIds);
+        
+        if (error && error.message.includes('policy')) {
+          reviewersData = reviewerIds.map(id => ({ 
+            user_id: id, 
+            first_name: 'Reviewer', 
+            last_name: `(${id.slice(0, 8)})`,
+            email: 'restricted@example.com'
+          }));
+        } else if (error) {
+          throw error;
+        } else {
+          reviewersData = data;
+        }
+      } catch (error) {
+        console.error('Error fetching reviewers:', error);
+        reviewersData = reviewerIds.map(id => ({ 
+          user_id: id, 
+          first_name: 'Reviewer', 
+          last_name: `(${id.slice(0, 8)})`,
+          email: 'restricted@example.com'
+        }));
+      }
 
       // Group reviews by manuscript
       const groupedReviews: ManuscriptReviews[] = manuscriptIds.map(manuscriptId => {
