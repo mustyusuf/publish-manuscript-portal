@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Users, UserPlus, Shield, Edit } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserWithRole {
   id: string;
@@ -27,6 +28,7 @@ const RoleManagement = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const { toast } = useToast();
+  const { userRole, user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -199,7 +201,12 @@ const RoleManagement = () => {
                   <h3 className="font-medium">
                     {user.first_name} {user.last_name}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(userRole === 'admin' || userRole === 'super_admin' || currentUser?.id === user.id) 
+                      ? user.email 
+                      : '***@***.***'
+                    }
+                  </p>
                   {user.institution && (
                     <p className="text-xs text-muted-foreground">{user.institution}</p>
                   )}
@@ -238,7 +245,7 @@ const RoleManagement = () => {
                         <div>
                           <Label>User</Label>
                           <p className="text-sm font-medium">
-                            {user.first_name} {user.last_name} ({user.email})
+                            {user.first_name} {user.last_name} ({(userRole === 'admin' || userRole === 'super_admin' || currentUser?.id === user.id) ? user.email : '***@***.***'})
                           </p>
                           <p className="text-xs text-muted-foreground">
                             Current role: {user.role}

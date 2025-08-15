@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Users, Shield, Edit, Save } from 'lucide-react';
 import AddUserDialog from './AddUserDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserProfile {
   user_id: string;
@@ -26,6 +27,7 @@ interface UserRole {
 
 const UserManagement = () => {
   const { toast } = useToast();
+  const { userRole, user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,7 +241,12 @@ const UserManagement = () => {
                         <TableCell className="font-medium">
                           {user.first_name} {user.last_name}
                         </TableCell>
-                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          {(userRole === 'admin' || userRole === 'super_admin' || currentUser?.id === user.user_id) 
+                            ? user.email 
+                            : '***@***.***'
+                          }
+                        </TableCell>
                         <TableCell>{user.institution || 'Not provided'}</TableCell>
                          <TableCell>
                            <Badge className={getRoleColor(currentRole)}>
