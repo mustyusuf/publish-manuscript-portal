@@ -1072,8 +1072,19 @@ const AdminDashboard = () => {
                      <div className="flex-1">
                        <div className="flex items-center gap-2 mb-1">
                          <h3 className="font-medium">{manuscript.title}</h3>
-                         <Badge variant="outline" className="text-xs font-mono">
-                           ID: {manuscript.id.slice(0, 8)}...
+                         <Badge 
+                           variant="outline" 
+                           className="text-xs font-mono cursor-pointer hover:bg-muted/50 transition-colors"
+                           onClick={() => {
+                             navigator.clipboard.writeText(manuscript.id);
+                             toast({
+                               title: "Copied!",
+                               description: "Manuscript ID copied to clipboard",
+                             });
+                           }}
+                           title="Click to copy ID"
+                         >
+                           ID: {manuscript.id}
                          </Badge>
                        </div>
                        <p className="text-sm text-muted-foreground">
