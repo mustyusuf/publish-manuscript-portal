@@ -1069,15 +1069,20 @@ const AdminDashboard = () => {
                       key={manuscript.id}
                       className="flex items-center justify-between p-4 border rounded-lg"
                     >
-                    <div className="flex-1">
-                      <h3 className="font-medium">{manuscript.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        by {manuscript.author.first_name} {manuscript.author.last_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Submitted: {new Date(manuscript.submission_date).toLocaleDateString()}
-                      </p>
-                    </div>
+                     <div className="flex-1">
+                       <div className="flex items-center gap-2 mb-1">
+                         <h3 className="font-medium">{manuscript.title}</h3>
+                         <Badge variant="outline" className="text-xs font-mono">
+                           ID: {manuscript.id.slice(0, 8)}...
+                         </Badge>
+                       </div>
+                       <p className="text-sm text-muted-foreground">
+                         by {manuscript.author.first_name} {manuscript.author.last_name}
+                       </p>
+                       <p className="text-xs text-muted-foreground">
+                         Submitted: {new Date(manuscript.submission_date).toLocaleDateString()}
+                       </p>
+                     </div>
                     
                     <div className="flex items-center gap-2">
                       <Badge className={getStatusColor(manuscript.status)}>
