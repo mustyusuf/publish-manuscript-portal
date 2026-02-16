@@ -29,10 +29,7 @@ const UserManual = () => {
       }],
     });
 
-    const buffer = await Packer.toBuffer(doc);
-    const blob = new Blob([buffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
-    });
+    const blob = await Packer.toBlob(doc);
     saveAs(blob, `${role}-user-manual-aipm.docx`);
   };
 
