@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Users, Shield, Edit, Save } from 'lucide-react';
 import AddUserDialog from './AddUserDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 interface UserProfile {
   user_id: string;
@@ -32,6 +33,8 @@ const UserManagement = () => {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingRoles, setUpdatingRoles] = useState<Set<string>>(new Set());
+  const [userPage, setUserPage] = useState(1);
+  const USERS_PER_PAGE = 10;
   const [confirmRoleChange, setConfirmRoleChange] = useState<{
     userId: string;
     userName: string;
@@ -232,7 +235,11 @@ const UserManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => {
+                  (() => {
+                    const totalUserPages = Math.ceil(users.length / USERS_PER_PAGE);
+                    const paginatedUsers = users.slice((userPage - 1) * USERS_PER_PAGE, userPage * USERS_PER_PAGE);
+                    return (<>
+                  {paginatedUsers.map((user) => {
                     const currentRole = getUserRole(user.user_id);
                     const isUpdating = updatingRoles.has(user.user_id);
                     
@@ -286,7 +293,45 @@ const UserManagement = () => {
                         </TableCell>
                       </TableRow>
                     );
-                  })
+                  })}
+                  {totalUserPages > 1 && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Pagination className="mt-2">
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious 
+                                onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                                className={userPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                            {Array.from({ length: totalUserPages }, (_, i) => i + 1).map(page => (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  isActive={page === userPage}
+                                  onClick={() => setUserPage(page)}
+                                  className="cursor-pointer"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            ))}
+                            <PaginationItem>
+                              <PaginationNext 
+                                onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                                className={userPage === totalUserPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                        <p className="text-sm text-muted-foreground text-center mt-1">
+                          Showing {((userPage - 1) * USERS_PER_PAGE) + 1}–{Math.min(userPage * USERS_PER_PAGE, users.length)} of {users.length} users
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </>);
+                  })()
                 )}
               </TableBody>
             </Table>

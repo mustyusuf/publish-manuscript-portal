@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 interface Manuscript {
   id: string;
@@ -107,6 +108,8 @@ const AdminDashboard = () => {
   const [searchField, setSearchField] = useState<'all' | 'id' | 'title' | 'author'>("all");
   const [fromDateTime, setFromDateTime] = useState<string>("");
   const [toDateTime, setToDateTime] = useState<string>("");
+  const [manuscriptPage, setManuscriptPage] = useState(1);
+  const MANUSCRIPTS_PER_PAGE = 10;
 
   useEffect(() => {
     fetchData();
@@ -1044,8 +1047,8 @@ const AdminDashboard = () => {
                   />
                 </div>
 
-                {manuscripts
-                  .filter((m) => {
+                {(() => {
+                  const filteredManuscripts = manuscripts.filter((m) => {
                     const q = searchQuery.trim().toLowerCase();
                     const textMatch = q
                       ? (searchField === 'id'
@@ -1063,8 +1066,11 @@ const AdminDashboard = () => {
                     const fromOk = fromDateTime ? ts >= new Date(fromDateTime).getTime() : true;
                     const toOk = toDateTime ? ts <= new Date(toDateTime).getTime() : true;
                     return textMatch && fromOk && toOk;
-                  })
-                  .map((manuscript) => (
+                  });
+                  const totalManuscriptPages = Math.ceil(filteredManuscripts.length / MANUSCRIPTS_PER_PAGE);
+                  const paginatedManuscripts = filteredManuscripts.slice((manuscriptPage - 1) * MANUSCRIPTS_PER_PAGE, manuscriptPage * MANUSCRIPTS_PER_PAGE);
+                  return (<>
+                  {paginatedManuscripts.map((manuscript) => (
                     <div
                       key={manuscript.id}
                       className="flex items-center justify-between p-4 border rounded-lg"
@@ -1312,7 +1318,41 @@ const AdminDashboard = () => {
                         </DropdownMenu>
                     </div>
                   </div>
-                ))}
+                  ))}
+                  {totalManuscriptPages > 1 && (
+                    <Pagination className="mt-4">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => setManuscriptPage(p => Math.max(1, p - 1))}
+                            className={manuscriptPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalManuscriptPages }, (_, i) => i + 1).map(page => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              isActive={page === manuscriptPage}
+                              onClick={() => setManuscriptPage(page)}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => setManuscriptPage(p => Math.min(totalManuscriptPages, p + 1))}
+                            className={manuscriptPage === totalManuscriptPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Showing {((manuscriptPage - 1) * MANUSCRIPTS_PER_PAGE) + 1}–{Math.min(manuscriptPage * MANUSCRIPTS_PER_PAGE, filteredManuscripts.length)} of {filteredManuscripts.length} manuscripts
+                  </p>
+                  </>);
+                })()}
               </div>
             </CardContent>
           </Card>

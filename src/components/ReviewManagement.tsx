@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from '@/hooks/use-toast';
 import { Download, Upload, Send, FileText } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 interface ReviewSubmission {
   id: string;
@@ -45,6 +46,8 @@ const ReviewManagement = () => {
   const [finalDocuments, setFinalDocuments] = useState<{[key: string]: FinalDocument[]}>({});
   const [selectedManuscriptId, setSelectedManuscriptId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [reviewPage, setReviewPage] = useState(1);
+  const REVIEWS_PER_PAGE = 10;
   const { toast } = useToast();
 
   useEffect(() => {
@@ -369,7 +372,11 @@ const ReviewManagement = () => {
             </div>
           ) : (
             <div className="space-y-8">
-              {manuscriptReviews.map((manuscript) => (
+              {(() => {
+                const totalReviewPages = Math.ceil(manuscriptReviews.length / REVIEWS_PER_PAGE);
+                const paginatedReviews = manuscriptReviews.slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE);
+                return (<>
+              {paginatedReviews.map((manuscript) => (
                 <div key={manuscript.manuscript_id} className="border rounded-lg p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -512,6 +519,40 @@ const ReviewManagement = () => {
                   </div>
                 </div>
               ))}
+              {totalReviewPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setReviewPage(p => Math.max(1, p - 1))}
+                        className={reviewPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalReviewPages }, (_, i) => i + 1).map(page => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          isActive={page === reviewPage}
+                          onClick={() => setReviewPage(page)}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setReviewPage(p => Math.min(totalReviewPages, p + 1))}
+                        className={reviewPage === totalReviewPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+              <p className="text-sm text-muted-foreground mt-2">
+                Showing {((reviewPage - 1) * REVIEWS_PER_PAGE) + 1}–{Math.min(reviewPage * REVIEWS_PER_PAGE, manuscriptReviews.length)} of {manuscriptReviews.length} reviews
+              </p>
+              </>);
+              })()}
             </div>
           )}
         </CardContent>
